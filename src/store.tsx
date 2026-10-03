@@ -187,6 +187,7 @@ interface StoreActions {
     biometricType?: 'fingerprint' | 'face_id' | 'touch_id' | 'webauthn_passkey';
   }) => Promise<{ success: boolean; signatureRecord?: DocumentSignatureRecord; error?: string }>;
   setUserSecurityPin: (userId: string, pin: string) => void;
+  updatePassword: (userId: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   registerUserBiometrics: (userId: string, status?: boolean) => Promise<{ success: boolean; error?: string }>;
   removeDocumentSignature: (signatureId: string) => void;
   // Competências Pedagógicas dos Docentes
@@ -1412,6 +1413,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         currentUser: updatedCurrentUser
       };
     });
+  };
+
+  const updatePassword = async (userId: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        password: newPassword,
+        mustChangePassword: false
+      });
+      setState(prev => ({
+        ...prev,
+        users: prev.users.map(u => u.id === userId ? { ...u, password: newPassword, mustChangePassword: false } : u),
+        currentUser: prev.currentUser?.id === userId ? { ...prev.currentUser, password: newPassword, mustChangePassword: false } : prev.currentUser
+      }));
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Erro ao atualizar senha.' };
+    }
   };
 
   const registerUserBiometrics = async (userId: string, status = true) => {
@@ -3468,6 +3486,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateUserSignature,
       signDocument,
       setUserSecurityPin,
+      updatePassword,
       registerUserBiometrics,
       removeDocumentSignature,
       addFinancialTransaction,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { Card } from '../components/ui';
-import { Building2, Server, Mail, Settings, MessageSquare, Fingerprint, Database, BarChart3, ShieldCheck, Activity } from 'lucide-react';
+import { Building2, Server, Mail, Settings, MessageSquare, Fingerprint, Database, BarChart3, ShieldCheck, Activity, User } from 'lucide-react';
 import { SchoolManagement } from '../components/SchoolManagement';
 import { SmtpConfigManager } from '../components/SmtpConfigManager';
 import { SmtpConfigModal } from '../components/SmtpConfigModal';
@@ -12,10 +12,12 @@ import { FirestoreBackupManager } from '../components/FirestoreBackupManager';
 import { NationalHierarchyStatisticsWorkflow } from '../components/NationalHierarchyStatisticsWorkflow';
 import { GovernanceManagerRegistration } from '../components/GovernanceManagerRegistration';
 import { SystemHealthDashboard } from '../components/SystemHealthDashboard';
+import { UserManagementManager } from '../components/admin/UserManagementManager';
+import { AdminCredentialsView } from '../components/admin/AdminCredentialsView';
 
 export function AdminDashboard() {
   const { schools, smtpSettings, backups } = useStore();
-  const [activeTab, setActiveTab] = useState<'systemHealth' | 'schools' | 'managers' | 'smtp' | 'emailLogs' | 'messages' | 'signature' | 'backup' | 'statistics'>('systemHealth');
+  const [activeTab, setActiveTab] = useState<'systemHealth' | 'schools' | 'managers' | 'smtp' | 'emailLogs' | 'messages' | 'signature' | 'backup' | 'statistics' | 'users' | 'credentials'>('systemHealth');
   const [isSmtpModalOpen, setIsSmtpModalOpen] = useState(false);
 
   return (
@@ -120,6 +122,28 @@ export function AdminDashboard() {
           </button>
 
           <button
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'users'
+                ? 'bg-red-900 text-white shadow-sm font-extrabold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <User size={15} /> Gestão de Utilizadores
+          </button>
+
+          <button
+            onClick={() => setActiveTab('credentials')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'credentials'
+                ? 'bg-blue-900 text-white shadow-sm font-extrabold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Key size={15} /> Minhas Credenciais
+          </button>
+
+          <button
             onClick={() => setActiveTab('statistics')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
               activeTab === 'statistics'
@@ -145,6 +169,10 @@ export function AdminDashboard() {
 
       {/* Tab Content */}
       {activeTab === 'systemHealth' && <SystemHealthDashboard />}
+
+      {activeTab === 'users' && <UserManagementManager />}
+
+      {activeTab === 'credentials' && <AdminCredentialsView />}
 
       {activeTab === 'statistics' && (
         <div className="space-y-6">

@@ -18,6 +18,7 @@ import { WelcomeSplashScreen } from './components/WelcomeSplashScreen';
 import { InitialLandingScreen } from './components/InitialLandingScreen';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PasswordChangeModal } from './components/PasswordChangeModal';
 
 function AppContent() {
   const { currentUser } = useStore();
@@ -54,30 +55,33 @@ function AppContent() {
   const isGovernance = ['national', 'provincial', 'district'].includes(currentUser.role);
 
   return (
-    <Layout>
-      <DashboardNoticeBanner />
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel Administrativo">
-        {currentUser.role === 'admin' && <AdminDashboard />}
-      </ErrorBoundary>
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel da Direcção">
-        {currentUser.role === 'director' && <DirectorDashboard />}
-      </ErrorBoundary>
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel Pedagógico">
-        {currentUser.role === 'pedagogical' && <PedagogicalDashboard />}
-      </ErrorBoundary>
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel do Professor">
-        {currentUser.role === 'teacher' && <TeacherDashboard />}
-      </ErrorBoundary>
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel da Secretaria">
-        {currentUser.role === 'secretariat' && <SecretariatDashboard />}
-      </ErrorBoundary>
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel de Governação">
-        {isGovernance && <GovernanceDashboard />}
-      </ErrorBoundary>
-      <ErrorBoundary fallbackTitle="Erro ao Carregar Painel do Aluno">
-        {currentUser.role === 'student' && <StudentDashboard />}
-      </ErrorBoundary>
-    </Layout>
+    <>
+      {currentUser.mustChangePassword && <PasswordChangeModal onClose={() => {}} />}
+      <Layout>
+        <DashboardNoticeBanner />
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel Administrativo">
+          {currentUser.role === 'admin' && <AdminDashboard />}
+        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel da Direcção">
+          {currentUser.role === 'director' && <DirectorDashboard />}
+        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel Pedagógico">
+          {currentUser.role === 'pedagogical' && <PedagogicalDashboard />}
+        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel do Professor">
+          {currentUser.role === 'teacher' && <TeacherDashboard />}
+        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel da Secretaria">
+          {currentUser.role === 'secretariat' && <SecretariatDashboard />}
+        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel de Governação">
+          {isGovernance && <GovernanceDashboard />}
+        </ErrorBoundary>
+        <ErrorBoundary fallbackTitle="Erro ao Carregar Painel do Aluno">
+          {currentUser.role === 'student' && <StudentDashboard />}
+        </ErrorBoundary>
+      </Layout>
+    </>
   );
 }
 

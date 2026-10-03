@@ -2,7 +2,7 @@ import { INITIAL_PROVINCES, INITIAL_DISTRICTS } from './data/mozambiqueLocations
 
 export const initialData = {
   users: [
-    { id: 'u1', name: 'Administrador Geral', email: 'admin@escola.com', role: 'admin' as const, roleTitle: 'Administrador Geral do Sistema', department: 'Tecnologias da Informação' },
+    { id: 'ST849547771', name: 'Administrador Geral', email: 'slaitertripas@gmail.com', role: 'admin' as const, roleTitle: 'Administrador Geral do Sistema', department: 'Tecnologias da Informação', password: '231383', mustChangePassword: false },
     { id: 'u1-gov', name: 'Administrador Geral (Gov)', email: 'admin@gov.mz', role: 'admin' as const, roleTitle: 'Administrador de Sistemas do Governo', department: 'Governo de Moçambique' },
     { id: 'u6', name: 'Ministro da Educação', email: 'ministro@gov.mz', role: 'national' as const, roleTitle: 'Ministro da Educação (MINEDH)', department: 'Gabinete do Ministro' },
     { id: 'u7', name: 'Director Provincial - Maputo', email: 'provincial@gov.mz', role: 'provincial' as const, roleTitle: 'Director Provincial (DPE)', department: 'Direção Provincial de Educação', provinceId: 'p1' },

@@ -74,6 +74,11 @@ export interface User {
   signature?: string;
   signatureImage?: string;
   securityPin?: string;
+  password?: string;
+  mustChangePassword?: boolean;
+  recoveryQuestion?: string;
+  recoveryAnswer?: string;
+  recoveryEmail?: string;
   biometricRegistered?: boolean;
   biometricRegisteredAt?: string;
   studentId?: string;

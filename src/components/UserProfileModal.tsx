@@ -47,7 +47,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
     department: currentUser?.department || 'Direcção Geral / Secretaria',
     roleTitle: currentUser?.roleTitle || (currentUser ? getRoleLabel(currentUser.role) : ''),
     address: (currentUser as any)?.address || 'Av. Mao Tse Tung, Maputo',
-    avatarUrl: currentUser?.avatarUrl || ''
+    avatarUrl: currentUser?.avatarUrl || '',
+    recoveryQuestion: (currentUser as any)?.recoveryQuestion || '',
+    recoveryAnswer: (currentUser as any)?.recoveryAnswer || '',
+    recoveryEmail: (currentUser as any)?.recoveryEmail || ''
   });
 
   const [signatureImage, setSignatureImage] = useState<string>(currentUser?.signatureImage || '');
@@ -70,7 +73,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
         department: currentUser.department || 'Direcção Geral / Secretaria',
         roleTitle: currentUser.roleTitle || getRoleLabel(currentUser.role),
         address: (currentUser as any).address || 'Av. Mao Tse Tung, Maputo',
-        avatarUrl: currentUser.avatarUrl || ''
+        avatarUrl: currentUser.avatarUrl || '',
+        recoveryQuestion: (currentUser as any).recoveryQuestion || '',
+        recoveryAnswer: (currentUser as any).recoveryAnswer || '',
+        recoveryEmail: (currentUser as any).recoveryEmail || ''
       });
       setSignatureImage(currentUser.signatureImage || '');
       setIsBiometricsActive(currentUser.biometricRegistered ?? true);
@@ -126,6 +132,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
       roleTitle: formData.roleTitle,
       address: formData.address,
       avatarUrl: formData.avatarUrl,
+      recoveryQuestion: formData.recoveryQuestion,
+      recoveryAnswer: formData.recoveryAnswer,
+      recoveryEmail: formData.recoveryEmail,
       signatureImage: signatureImage,
       biometricRegistered: isBiometricsActive
     } as User;
@@ -297,6 +306,48 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                </div>
+
+                <div className="col-span-full pt-4 border-t border-slate-100">
+                    <h4 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+                        <Lock size={16} className="text-blue-700" /> Segurança & Recuperação de Conta
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="col-span-full">
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Pergunta de Recuperação:
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Qual o nome da sua primeira escola?"
+                            value={formData.recoveryQuestion}
+                            onChange={e => setFormData(prev => ({ ...prev, recoveryQuestion: e.target.value }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Resposta de Recuperação:
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.recoveryAnswer}
+                            onChange={e => setFormData(prev => ({ ...prev, recoveryAnswer: e.target.value }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            E-mail de Recuperação:
+                          </label>
+                          <input
+                            type="email"
+                            value={formData.recoveryEmail}
+                            onChange={e => setFormData(prev => ({ ...prev, recoveryEmail: e.target.value }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                    </div>
                 </div>
 
                 <div>
