@@ -1,0 +1,122 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection test doc
+    match /test/connection {
+      allow read, write: if true;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read, write: if isValidId(userId);
+    }
+
+    // Schools Collection
+    match /schools/{schoolId} {
+      allow read, write: if isValidId(schoolId);
+    }
+
+    // Students Collection
+    match /students/{studentId} {
+      allow read, write: if isValidId(studentId);
+    }
+
+    // Employees Collection
+    match /employees/{employeeId} {
+      allow read, write: if isValidId(employeeId);
+    }
+
+    // Evaluations Collection
+    match /evaluations/{evaluationId} {
+      allow read, write: if isValidId(evaluationId);
+    }
+
+    // Class Tasks Collection
+    match /classTasks/{taskId} {
+      allow read, write: if isValidId(taskId);
+    }
+
+    // Task Submissions Collection
+    match /taskSubmissions/{submissionId} {
+      allow read, write: if isValidId(submissionId);
+    }
+
+    // Petitions Collection
+    match /petitions/{petitionId} {
+      allow read, write: if isValidId(petitionId);
+    }
+
+    // School Documents Collection
+    match /schoolDocuments/{docId} {
+      allow read, write: if isValidId(docId);
+    }
+
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read, write: if isValidId(notificationId);
+    }
+
+    // User Notifications Collection
+    match /userNotifications/{userNotificationId} {
+      allow read, write: if isValidId(userNotificationId);
+    }
+
+    // Chat Messages Collection
+    match /chatMessages/{messageId} {
+      allow read, write: if isValidId(messageId);
+    }
+
+    // Grades Collection
+    match /grades/{gradeId} {
+      allow read, write: if isValidId(gradeId);
+    }
+
+    // Exam Grades Collection
+    match /examGrades/{examGradeId} {
+      allow read, write: if isValidId(examGradeId);
+    }
+
+    // Classes Collection
+    match /classes/{classId} {
+      allow read, write: if isValidId(classId);
+    }
+
+    // Subjects Collection
+    match /subjects/{subjectId} {
+      allow read, write: if isValidId(subjectId);
+    }
+
+    // Backups Collection (Pedagogical and Administrative Backups)
+    match /backups/{backupId} {
+      allow read, write: if isValidId(backupId);
+    }
+  }
+}

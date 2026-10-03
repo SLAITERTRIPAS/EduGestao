@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix EduGestão - Sistema Escolar",
+  "description": "Sistema completo de gestão escolar com portais para Secretaria, Professores, Pedagogia e Direção.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

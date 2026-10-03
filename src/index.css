@@ -1,0 +1,446 @@
+/* ========================================================================= */
+/* AREA 1: SYSTEM GLOBAL FONTS & BASE DESIGN PRINCIPLES                      */
+/* ========================================================================= */
+@import url('https://fonts.cdnfonts.com/css/latin-modern-roman');
+@import url('https://fonts.cdnfonts.com/css/computer-modern');
+@import "tailwindcss";
+
+/* Force Bookman Old Style throughout the entire system for editorial elegance */
+body, html, #root, button, input, select, textarea, p, span, div, th, td, h1, h2, h3, h4, h5, h6, a {
+  font-family: 'Bookman Old Style', 'Bookman', 'URW Bookman L', 'Georgia', serif !important;
+}
+
+/* Allow specific monospace elements to keep monospaced font for code/number formatting */
+.font-mono, .font-mono * {
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+}
+
+/* Remove all backdrop-blur effects as requested to prevent text blurring */
+* {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Ensure all text is highly visible, has perfect contrast with the background, and is never blurry */
+body {
+  color: #000000;
+  background-color: #f1f5f9;
+  text-rendering: optimizeLegibility !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 2: HIGH CONTRAST & ACCESSIBILITY CONTEXTS                            */
+/* ========================================================================= */
+/* Force high contrast and visibility: White backgrounds must have black text */
+.bg-white, .bg-slate-50, .bg-gray-50, .bg-stone-50, .bg-amber-50, .bg-[#fffefc], .bg-[#fcfbf7], .bg-[#fdfbf7], .bg-[#faf8f0], [class*="bg-white"] {
+  color: #000000 !important;
+}
+
+/* Links and spans inside white/light backgrounds should be black by default unless they have explicit text color overrides */
+.bg-white span:not([class*="text-"]):not(.text-white), 
+.bg-white p:not([class*="text-"]):not(.text-white), 
+.bg-white h1:not([class*="text-"]), 
+.bg-white h2:not([class*="text-"]), 
+.bg-white h3:not([class*="text-"]), 
+.bg-white h4:not([class*="text-"]), 
+.bg-white h5:not([class*="text-"]), 
+.bg-white h6:not([class*="text-"]),
+.bg-slate-50 span:not([class*="text-"]):not(.text-white), 
+.bg-slate-50 p:not([class*="text-"]):not(.text-white),
+.bg-[#fffefc] span:not([class*="text-"]):not(.text-white), 
+.bg-[#fffefc] p:not([class*="text-"]):not(.text-white),
+.bg-[#fcfbf7] span:not([class*="text-"]):not(.text-white), 
+.bg-[#fcfbf7] p:not([class*="text-"]):not(.text-white) {
+  color: #000000 !important;
+}
+
+/* Direct overriding rules: ANY text element inside any colored/dark background MUST be white, taking absolute precedence over any parent white/light backgrounds! */
+.bg-blue-500, .bg-blue-600, .bg-blue-700, .bg-blue-800, .bg-blue-900, .bg-blue-950,
+.bg-sky-500, .bg-sky-600, .bg-sky-700, .bg-sky-800, .bg-sky-900,
+.bg-indigo-500, .bg-indigo-600, .bg-indigo-700, .bg-indigo-800, .bg-indigo-900, .bg-indigo-950,
+.bg-slate-800, .bg-slate-900, .bg-slate-950,
+.bg-emerald-600, .bg-emerald-700, .bg-emerald-800, .bg-[#047857],
+.bg-rose-600, .bg-rose-700, .bg-rose-800, .bg-[#9f1239],
+.bg-[#0369a1], .bg-[#3730a3], .bg-[#05091b], .bg-[#070d24], .bg-[#0c1738], .bg-[#05091b] {
+  &, & *, & h1, & h2, & h3, & h4, & h5, & h6, & p, & span, & li, & a, & th, & td, & div, & code {
+    color: #ffffff !important;
+  }
+}
+
+/* High contrast inputs and select fields with thick boundaries */
+input, select, textarea {
+  border: 1.5px solid #1e293b !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* System-wide High Contrast (Yellow on Black accessibility mode) */
+.high-contrast {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+.high-contrast * {
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  background-color: #000000 !important;
+}
+.high-contrast button, .high-contrast .button {
+  background-color: #000000 !important;
+  border: 2px solid #ffff00 !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 3: SPECIFIC EXPLICIT COLOR HIGHLIGHT UTILITIES                       */
+/* ========================================================================= */
+/* Ensure explicit text color utilities always override general background text color constraints */
+.text-white, [class*="text-white"] { color: #ffffff !important; }
+.text-black, [class*="text-black"] { color: #000000 !important; }
+.text-red-500, .text-red-600, [class*="text-red-600"] { color: #dc2626 !important; }
+.text-red-700, [class*="text-red-700"] { color: #b91c1c !important; }
+.text-red-950, [class*="text-red-950"] { color: #450a0a !important; }
+.text-emerald-500, .text-emerald-600, [class*="text-emerald-600"] { color: #059669 !important; }
+.text-emerald-700, [class*="text-emerald-700"] { color: #047857 !important; }
+.text-emerald-950, [class*="text-emerald-950"] { color: #022c22 !important; }
+.text-blue-900, [class*="text-blue-900"] { color: #1e3a8a !important; }
+.text-blue-950, [class*="text-blue-950"] { color: #172554 !important; }
+.text-slate-900, [class*="text-slate-900"] { color: #0f172a !important; }
+.text-slate-950, [class*="text-slate-950"] { color: #020617 !important; }
+.text-slate-500, [class*="text-slate-500"] { color: #64748b !important; }
+.text-slate-600, [class*="text-slate-600"] { color: #475569 !important; }
+.text-slate-700, [class*="text-slate-700"] { color: #334155 !important; }
+
+/* Darken gray text across light interfaces to prevent light gray-on-white accessibility blur */
+.bg-white .text-slate-400, .bg-white .text-gray-400, .bg-white .text-slate-500, .bg-white .text-gray-500,
+.bg-slate-50 .text-slate-400, .bg-slate-50 .text-gray-400, .bg-slate-50 .text-slate-500, .bg-slate-50 .text-gray-500 {
+  color: #334155;
+}
+
+
+/* ========================================================================= */
+/* AREA 4: MENU GERAL (GENERAL NAVIGATION, HEADERS, SIDEBARS & FOOTERS)     */
+/* ========================================================================= */
+/* Global application navigation wrapper styling */
+header.bg-slate-900, nav.bg-[#070d24], aside.bg-slate-900, .sidebar-container {
+  color: #ffffff !important;
+}
+
+/* Secondary muted text inside navigation and headers */
+.bg-[#070d24] .text-slate-400, .bg-[#05091b] .text-slate-400, .bg-[#0c1738] .text-slate-400 {
+  color: #f1f5f9 !important;
+}
+
+/* Specific styling for the universal sticky/push footer */
+footer {
+  box-sizing: border-box !important;
+}
+footer span, footer div {
+  color: #ffffff !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 5: CAPA (STUDENT PROCESS / CAPA DO PROCESSO INDIVIDUAL)              */
+/* ========================================================================= */
+/* Cover page and biological student sheet styling and geometry */
+.process-document, .student-process-cover {
+  box-sizing: border-box !important;
+}
+
+/* Cover layout grid parameters and spacing alignment */
+.student-process-cover span {
+  text-wrap: balance;
+}
+
+
+/* ========================================================================= */
+/* AREA 6: CERTIFICADOS (OFFICIAL GRADUATION CERTIFICATES)                  */
+/* ========================================================================= */
+/* Certificate-specific document layouts */
+.certificate-document {
+  box-sizing: border-box !important;
+}
+
+/* Padrão de segurança guilhoché e ornamentos de cantos */
+#guilloche-pat, #guilloche-pat-landscape {
+  pointer-events: none;
+}
+
+/* Gold/Amber highlights inside colored/dark backgrounds should remain gold/amber */
+.bg-blue-500 .text-amber-300, .bg-blue-600 .text-amber-300, .bg-blue-700 .text-amber-300, .bg-blue-800 .text-amber-300, .bg-blue-900 .text-amber-300, .bg-blue-950 .text-amber-300,
+.bg-slate-900 .text-amber-300, .bg-slate-950 .text-amber-300, .bg-[#05091b] .text-amber-300, .bg-[#070d24] .text-amber-300,
+.text-gold, .text-amber-300, .text-amber-400, .text-yellow-400, .text-yellow-500,
+[class*="text-amber-400"], [class*="text-amber-300"] {
+  color: #fbbf24 !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 7: DECLARAÇÕES (OFFICIAL ACADEMIC GRADE TRANSCRIPTS)               */
+/* ========================================================================= */
+/* Declaration-specific page layout and cycle themes */
+.declaration-document {
+  box-sizing: border-box !important;
+}
+
+/* Institutional decoration borders */
+.declaration-border-theme {
+  border-width: 4px;
+}
+
+
+/* ========================================================================= */
+/* AREA 8: PAUTAS DE FREQUÊNCIA (ANNUAL FREQUENCY GRIDS)                     */
+/* ========================================================================= */
+/* High density wide pautas layout for annual grades compilation */
+.pauta-print, .pauta-frequency-grid {
+  box-sizing: border-box !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 9: PAUTAS DE EXAME (NATIONAL WRITTEN EXAM GRIDS)                     */
+/* ========================================================================= */
+/* Specific styling for national exams compilation under Mozambique regulations */
+.pauta-exame-grid {
+  box-sizing: border-box !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 10: LATEX / COMPUTER MODERN TYPOGRAPHY FOR LEGAL DOCUMENTS          */
+/* ========================================================================= */
+.font-latex,
+.latex-font,
+.font-serif,
+.a4-portrait-document,
+.a4-landscape-document,
+.certificate-document,
+.declaration-document {
+  font-family: 'Latin Modern Roman', 'Computer Modern', 'CMU Serif', 'TeX Gyre Termes', 'EB Garamond', 'Times New Roman', serif !important;
+}
+
+/* Explicit body text sizing of 13pt, normal weight, and black color for Memória Descritiva */
+.font-latex p,
+.font-latex li,
+.font-latex .body-text {
+  font-size: 13pt !important;
+  color: #000000 !important;
+  font-weight: normal !important;
+  line-height: 1.5 !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 11: PAPER SHEET SPECIFICATIONS (A4 Portrait & Landscape Layouts)    */
+/* ========================================================================= */
+/* Standard A4 Paper Sheets (ISO 216: 210mm × 297mm) */
+.a4-portrait-document {
+  width: 210mm !important;
+  min-height: 297mm !important;
+  max-width: 210mm !important;
+  box-sizing: border-box !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.a4-landscape-document {
+  width: 297mm !important;
+  min-height: 210mm !important;
+  max-width: 297mm !important;
+  box-sizing: border-box !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+
+/* ========================================================================= */
+/* AREA 12: PRINT SPECIFICATIONS & MEDIA RULES                               */
+/* ========================================================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0mm;
+  }
+
+  /* Specific page size rules when requested */
+  @page a4-portrait {
+    size: A4 portrait;
+    margin: 0mm;
+  }
+
+  @page a4-landscape {
+    size: A4 landscape;
+    margin: 0mm;
+  }
+
+  @page a3-landscape {
+    size: A3 landscape;
+    margin: 5mm;
+  }
+  
+  html, body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Reset all containers, wrappers, flexboxes, and scrollable divs so they never clip or hide printable content */
+  #root,
+  .min-h-screen,
+  .flex-1,
+  main,
+  div,
+  section,
+  article {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  /* Reset all fixed overlays, backdrop modals, and dialog containers during print */
+  .fixed,
+  .inset-0,
+  .z-50,
+  [class*="bg-slate-900"],
+  [class*="bg-slate-950"],
+  [class*="backdrop-blur"],
+  [class*="overflow-y-auto"] {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Hide app chrome, sidebars, headers, tabs, navigation and buttons everywhere */
+  header,
+  nav,
+  aside,
+  .no-print,
+  button,
+  input,
+  select,
+  textarea,
+  .print\:hidden,
+  [role="tablist"],
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  /* Isolate active printed target and hide all other workspace siblings */
+  body:has(.print-target-active) #root > div > div:last-child > *:not(.print-target-active):not(:has(.print-target-active)) {
+    display: none !important;
+  }
+
+  body:has(.print-target-active) .flex-1.min-w-0 > *:not(.print-target-active):not(:has(.print-target-active)) {
+    display: none !important;
+  }
+
+  /* Force single-page A4 documents (Certificates, Diplomas, Declarations) into exact single sheet */
+  .a4-portrait-document,
+  .certificate-document,
+  .declaration-document,
+  #declaration-print-area,
+  #certificate-print-area,
+  #transfer-minuta-print {
+    page: a4-portrait;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    max-width: 210mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+  }
+
+  .a4-landscape-document {
+    page: a4-landscape;
+    width: 297mm !important;
+    min-height: 210mm !important;
+    max-width: 297mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+  }
+
+  /* Multi-page reports, processes, transfer documents, and books flow naturally across pages */
+  .report-document,
+  .process-document,
+  .transfer-document,
+  .multi-page-document,
+  .printable-report {
+    width: 100% !important;
+    max-width: 210mm !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Pautas: A3 Landscape & automatic pagination */
+  .pauta-print,
+  #pauta-container {
+    page: a3-landscape;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+    transform: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .pauta-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "App user profile and credentials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "User ID" },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 64 },
+        "schoolId": { "type": "string", "maxLength": 64 },
+        "province": { "type": "string", "maxLength": 64 },
+        "district": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "School": {
+      "title": "School",
+      "description": "School profile entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 200 },
+        "code": { "type": "string", "maxLength": 64 },
+        "province": { "type": "string", "maxLength": 64 },
+        "district": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "province", "district"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student record entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 128 },
+        "schoolId": { "type": "string", "maxLength": 64 },
+        "classId": { "type": "string", "maxLength": 64 },
+        "gender": { "type": "string", "enum": ["M", "F"] },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "schoolId"]
+    },
+    "Evaluation": {
+      "title": "Evaluation",
+      "description": "Evaluation item (ACS, APT, Exame)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "classId": { "type": "string" },
+        "className": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "type": { "type": "string", "enum": ["ACS", "APT", "Exame"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "room": { "type": "string" },
+        "teacherName": { "type": "string" }
+      },
+      "required": ["id", "schoolId", "classId", "title", "date"]
+    },
+    "ClassTask": {
+      "title": "ClassTask",
+      "description": "Task/Homework item for a class",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "classId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "teacherName": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "schoolId", "classId", "title", "dueDate"]
+    },
+    "TaskSubmission": {
+      "title": "TaskSubmission",
+      "description": "Student submission for a class task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "taskId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "classId": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "answerText": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "grade": { "type": "number" },
+        "feedback": { "type": "string" }
+      },
+      "required": ["id", "taskId", "studentId", "answerText"]
+    },
+    "Petition": {
+      "title": "Petition",
+      "description": "Petition or complaint record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "requesterName": { "type": "string" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "type", "description", "status"]
+    },
+    "SchoolDocument": {
+      "title": "SchoolDocument",
+      "description": "School certificates, declarations and archive documents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "docType": { "type": "string" },
+        "studentId": { "type": "string" },
+        "issuedAt": { "type": "string" }
+      },
+      "required": ["id", "schoolId", "title", "docType"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time notice broadcasted by Secretariat to students and teachers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "targetAudience": { "type": "string", "enum": ["todos", "professores", "alunos"] },
+        "priority": { "type": "string", "enum": ["urgente", "importante", "normal"] },
+        "senderName": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "message", "targetAudience"]
+    },
+    "BackupRecord": {
+      "title": "BackupRecord",
+      "description": "Snapshot metadata of automated and manual pedagogical and administrative backups in Firestore",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "triggeredBy": { "type": "string" },
+        "type": { "type": "string", "enum": ["automático", "manual"] },
+        "status": { "type": "string", "enum": ["concluído", "em_progresso", "falha"] },
+        "pedagogicalCount": { "type": "number" },
+        "administrativeCount": { "type": "number" },
+        "summary": { "type": "string", "maxLength": 1000 },
+        "sizeKb": { "type": "number" }
+      },
+      "required": ["id", "createdAt", "type", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile collection"
+    },
+    "/schools/{schoolId}": {
+      "schema": { "$ref": "#/entities/School" },
+      "description": "School details"
+    },
+    "/students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Student details"
+    },
+    "/evaluations/{evaluationId}": {
+      "schema": { "$ref": "#/entities/Evaluation" },
+      "description": "Class evaluations scheduled"
+    },
+    "/classTasks/{taskId}": {
+      "schema": { "$ref": "#/entities/ClassTask" },
+      "description": "Class homework tasks"
+    },
+    "/taskSubmissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/TaskSubmission" },
+      "description": "Student homework submissions"
+    },
+    "/petitions/{petitionId}": {
+      "schema": { "$ref": "#/entities/Petition" },
+      "description": "Petitions and complaints"
+    },
+    "/schoolDocuments/{docId}": {
+      "schema": { "$ref": "#/entities/SchoolDocument" },
+      "description": "School declarations, certificates and archives"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Real-time official notices and announcements"
+    },
+    "/backups/{backupId}": {
+      "schema": { "$ref": "#/entities/BackupRecord" },
+      "description": "Automated and manual backup snapshots of pedagogical and administrative data"
+    }
+  }
+}
