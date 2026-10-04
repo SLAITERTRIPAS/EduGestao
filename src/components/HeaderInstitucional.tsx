@@ -48,6 +48,7 @@ export const HeaderInstitucional: React.FC<HeaderInstitucionalProps> = ({
     schoolName: displaySchoolName 
   });
   const displayYear = academicYear || 2026;
+  const schoolTypes = school?.schoolTypes || [];
 
   const sizeClasses = {
     sm: 'h-20 w-20',
@@ -65,9 +66,9 @@ export const HeaderInstitucional: React.FC<HeaderInstitucionalProps> = ({
         </div>
       )}
 
-      {/* 1. Emblema Oficial da República de Moçambique & Logótipo Oficial da Escola */}
+      {/* 1. Emblema Oficial da República de Moçambique */}
       {showEmblem && (
-        <div className="flex items-center justify-center gap-4 sm:gap-6 mb-2">
+        <div className="flex items-center justify-center mb-2">
           {/* Emblema Nacional de Moçambique */}
           <img
             src={MOZAMBIQUE_LOGO_URL}
@@ -76,17 +77,6 @@ export const HeaderInstitucional: React.FC<HeaderInstitucionalProps> = ({
             style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.2))' }}
             referrerPolicy="no-referrer"
           />
-          {/* Logótipo Oficial da Escola (Injetado dinamicamente pela Direção) */}
-          {(school?.logoUrl || (school as any)?.logo) && (
-            <img
-              src={school?.logoUrl || (school as any)?.logo}
-              alt={`Logótipo da Escola - ${displaySchoolName}`}
-              className={`${sizeClasses[emblemSize]} object-contain select-none`}
-              style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.2))' }}
-              referrerPolicy="no-referrer"
-              title={`Logótipo Oficial da ${displaySchoolName}`}
-            />
-          )}
         </div>
       )}
 
@@ -104,11 +94,20 @@ export const HeaderInstitucional: React.FC<HeaderInstitucionalProps> = ({
         SERVIÇOS DISTRITAIS DE EDUCAÇÃO, JUVENTUDE E TECNOLOGIA DE: {displayDistrict}
       </h4>
 
-      {/* 3. Nome da Instituição de Ensino */}
-      <div className="mt-1 inline-block">
+      {/* 3. Nome da Instituição de Ensino e Tipo de Escola */}
+      <div className="mt-1 flex flex-col items-center gap-1">
         <h5 className="text-sm sm:text-base font-black uppercase tracking-wide text-blue-950 font-serif bg-amber-50/80 px-3.5 py-0.5 rounded border border-slate-300 shadow-2xs">
           {displaySchoolName}
         </h5>
+        {schoolTypes.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1">
+            {schoolTypes.map((type, idx) => (
+              <span key={idx} className="text-[9px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase">
+                {type}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 4. Código Institucional Padronizado e Ano Lectivo */}

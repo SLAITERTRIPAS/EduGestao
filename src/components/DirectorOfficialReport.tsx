@@ -24,11 +24,11 @@ export const DirectorOfficialReport: React.FC = () => {
 
   const school = schoolList.find(s => s.id === currentUser?.schoolId) || schoolList[0] || {
     id: 's1',
-    name: 'Escola Secundária Josina Machel',
-    code: 'ESC-MAP-001',
-    province: 'Maputo Cidade',
-    district: 'KaMpfumo',
-    directorName: currentUser?.name || 'Dr. Armando Mondlane',
+    name: 'Instituição de Ensino',
+    code: '---',
+    province: '---',
+    district: '---',
+    directorName: currentUser?.name || 'Director da Escola',
     dapName: 'Director Adjunto Pedagógico'
   };
 
@@ -151,8 +151,8 @@ export const DirectorOfficialReport: React.FC = () => {
     gradeCounts[grade].total++;
   });
 
-  const pendingReportsCount = reportList.filter(r => r.status === 'submitted' || r.status === 'draft').length;
-  const signedReportsCount = reportList.filter(r => r.status === 'signed' || r.signedByDirector).length;
+  const pendingReportsCount = reportList.filter(r => r.status === 'submitted_to_director' || r.status === 'draft').length;
+  const signedReportsCount = reportList.filter(r => r.status === 'signed_by_director' || r.status === 'published').length;
 
   const handlePrint = () => {
     printDocument('director-report-print');
@@ -203,10 +203,21 @@ export const DirectorOfficialReport: React.FC = () => {
         <HeaderInstitucional 
           school={school} 
           academicYear={2026}
-          documentTitle="RELATÓRIO INSTITUCIONAL DA DIRECÇÃO DA ESCOLA"
+          documentTitle={`RELATÓRIO INSTITUCIONAL DE DIRECÇÃO - ${currentUser?.name?.toUpperCase()}`}
           badge="Supervisão Geral, Recursos Humanos & Rendimento Pedagógico"
           emblemSize="md"
         />
+
+        {/* 0. Enquadramento Estratégico & Legal */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+          <h3 className="text-[10px] font-black uppercase text-blue-900 tracking-widest flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-blue-700" />
+            Enquadramento Estratégico & Legal
+          </h3>
+          <p className="text-[11px] text-slate-700 leading-relaxed text-justify font-medium italic">
+            O presente documento constitui a síntese executiva da gestão escolar, consolidando indicadores de desempenho pedagógico e administrativo. Fundamenta-se nas competências do Director da Escola para a supervisão da qualidade de ensino, gestão eficiente de recursos humanos e garantia da conformidade institucional perante o Ministério da Educação e Desenvolvimento Humano.
+          </p>
+        </div>
 
         {/* 1. Enquadramento Legal & Competências */}
         <div className="space-y-2">

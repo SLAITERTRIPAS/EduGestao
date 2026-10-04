@@ -8,7 +8,7 @@ import { StudentDocumentQRCode } from './StudentDocumentQRCode';
 import { DigitalSignatureStamp } from './DigitalSignatureStamp';
 import { printDocument } from '../utils/printHelper';
 import { ensureStudentCodeBeforeName } from '../utils/studentCodeValidator';
-import { getCurriculumSubjectsForGrade, numberToWords } from '../utils/gradeCurriculum';
+import { getCurriculumSubjectsForGrade } from '../utils/gradeCurriculum';
 import { DigitalSignatureModal } from './DigitalSignatureModal';
 
 interface CertificateDocumentProps {

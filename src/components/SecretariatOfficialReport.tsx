@@ -22,10 +22,10 @@ export const SecretariatOfficialReport: React.FC = () => {
 
   const school = schoolList.find(s => s.id === currentUser?.schoolId) || schoolList[0] || {
     id: 's1',
-    name: 'Escola Secundária Josina Machel',
-    code: 'ESC-MAP-001',
-    province: 'Maputo Cidade',
-    district: 'KaMpfumo',
+    name: 'Instituição de Ensino',
+    code: '---',
+    province: '---',
+    district: '---',
     secretariatChiefName: currentUser?.name || 'Chefe da Secretaria',
     directorName: 'Director da Escola'
   };
@@ -139,10 +139,21 @@ export const SecretariatOfficialReport: React.FC = () => {
         <HeaderInstitucional
           school={school}
           academicYear={2026}
-          documentTitle="RELATÓRIO OFICIAL DE CADASTRO E EXPEDIENTE DE SECRETARIA"
+          documentTitle={`RELATÓRIO OFICIAL DE SECRETARIA - ${currentUser?.name?.toUpperCase()}`}
           badge="Custódia Documental, Matrículas, Certificados & Arquivo"
           emblemSize="md"
         />
+
+        {/* 0. Enquadramento Técnico-Administrativo */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+          <h3 className="text-[10px] font-black uppercase text-indigo-900 tracking-widest flex items-center gap-2">
+            <Database className="w-4 h-4 text-indigo-700" />
+            Enquadramento Técnico-Administrativo
+          </h3>
+          <p className="text-[11px] text-slate-700 leading-relaxed text-justify font-medium italic">
+            Este relatório administrativo sistematiza a gestão do expediente escolar, em conformidade com as Normas de Funcionamento dos Serviços da Administração Pública e o Regulamento de Matrículas do MINEDH. Documenta a eficiência na emissão de documentos oficiais e a integridade do arquivo institucional sob custódia da Secretaria Geral.
+          </p>
+        </div>
 
         {/* 1. Competências Legais */}
         <div className="space-y-2">

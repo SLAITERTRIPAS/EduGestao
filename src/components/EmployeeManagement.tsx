@@ -14,6 +14,7 @@ import {
   UserPlus, 
   Users, 
   Search, 
+  Plus,
   Eye, 
   Trash2, 
   Printer, 
@@ -101,8 +102,38 @@ export function EmployeeManagement() {
     trainingArea: '',
     leadershipRole: '',
     department: '',
-    taughtSubjects: ['', '', '', ''],
+    taughtSubjects: ['', ''],
+    assignedClasses: [] as { classId: string; className: string }[],
   });
+
+  const addTaughtSubject = () => {
+    setNewEmployee(prev => ({
+      ...prev,
+      taughtSubjects: [...prev.taughtSubjects, '']
+    }));
+  };
+
+  const removeTaughtSubject = (index: number) => {
+    if (newEmployee.taughtSubjects.length <= 1) return;
+    setNewEmployee(prev => ({
+      ...prev,
+      taughtSubjects: prev.taughtSubjects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addAssignedClass = () => {
+    setNewEmployee(prev => ({
+      ...prev,
+      assignedClasses: [...(prev.assignedClasses || []), { classId: `temp-${Date.now()}`, className: '' }]
+    }));
+  };
+
+  const removeAssignedClass = (index: number) => {
+    setNewEmployee(prev => ({
+      ...prev,
+      assignedClasses: (prev.assignedClasses || []).filter((_, i) => i !== index)
+    }));
+  };
 
   // Dynamic automatic Unique ID calculation based on Name Initials + NUIT
   const liveGeneratedId = useMemo(() => {
@@ -170,7 +201,8 @@ export function EmployeeManagement() {
       trainingArea: newEmployee.trainingArea.trim(),
       leadershipRole: newEmployee.leadershipRole.trim(),
       department: newEmployee.department,
-      taughtSubjects: newEmployee.taughtSubjects.filter(s => s.trim() !== '')
+      taughtSubjects: newEmployee.taughtSubjects.filter(s => s.trim() !== ''),
+      assignedClasses: newEmployee.assignedClasses
     };
 
     addEmployee(createdEmployeePayload);
@@ -217,7 +249,8 @@ export function EmployeeManagement() {
       trainingArea: '',
       leadershipRole: '',
       department: '',
-      taughtSubjects: ['', '', '', ''],
+      taughtSubjects: ['', ''],
+      assignedClasses: [],
     });
   };
 
@@ -1061,6 +1094,90 @@ export function EmployeeManagement() {
                   <option value="CTA">CTA (Corpo Técnico Administrativo)</option>
                 </select>
               </div>
+
+              {/* DISCIPLINAS (APENAS PARA DOCENTES) */}
+              {newEmployee.career === 'Docente' && (
+                <div className="md:col-span-3 space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-gray-800">Disciplinas que Leciona</label>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={addTaughtSubject}
+                        className="h-7 text-[10px] px-2 gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Plus className="h-3 w-3" /> Adicionar Disciplina
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {newEmployee.taughtSubjects.map((subject, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder={`Ex: Matemática`}
+                            value={subject}
+                            onChange={e => {
+                              const updated = [...newEmployee.taughtSubjects];
+                              updated[index] = e.target.value;
+                              setNewEmployee({ ...newEmployee, taughtSubjects: updated });
+                            }}
+                            className="h-10 flex-1"
+                          />
+                          {newEmployee.taughtSubjects.length > 1 && (
+                            <button 
+                              type="button"
+                              onClick={() => removeTaughtSubject(index)}
+                              className="text-red-400 hover:text-red-600 px-1"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-gray-800">Classes e Turmas (Ex: 8ªA, 9ªB)</label>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={addAssignedClass}
+                        className="h-7 text-[10px] px-2 gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Plus className="h-3 w-3" /> Adicionar Turma
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {(newEmployee.assignedClasses || []).map((cls, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder={`Ex: 10ª B`}
+                            value={cls.className}
+                            onChange={e => {
+                              const updated = [...(newEmployee.assignedClasses || [])];
+                              updated[index] = { ...updated[index], className: e.target.value };
+                              setNewEmployee({ ...newEmployee, assignedClasses: updated });
+                            }}
+                            className="h-10 flex-1"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => removeAssignedClass(index)}
+                            className="text-red-400 hover:text-red-600 px-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {(newEmployee.assignedClasses || []).length === 0 && (
+                        <p className="text-[11px] text-gray-400 italic col-span-3">Nenhuma turma adicionada. Clique em "Adicionar Turma" para vincular o docente.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ALOCAÇÃO / DEPARTAMENTO (PARA CTA) */}
               {newEmployee.career === 'CTA' && (

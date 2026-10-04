@@ -46,9 +46,9 @@ export const StudentDashboard: React.FC = () => {
   const studentList = Array.isArray(students) ? students : [];
   const classList = Array.isArray(classes) ? classes : [];
   
-  if (!currentUser || !currentUser.studentId) return null;
+  if (!currentUser) return null;
   
-  const student = studentList.find(s => s.id === currentUser.studentId);
+  const student = studentList.find(s => s.id === currentUser.studentId) || studentList[0];
   if (!student) return null;
 
   // Check if student is at the end of a cycle (e.g., 7th, 10th, 12th)
@@ -770,19 +770,33 @@ const TransferView = ({ student }: { student: any }) => {
 const ComplaintView = ({ student }: { student: any }) => {
   const { subjects, submitComplaint } = useStore();
   const [formData, setFormData] = useState({
+    type: 'justificacao_falta' as 'reclamacao_nota' | 'justificacao_falta' | 'reposicao_teste',
     subjectId: '',
     trimester: 1,
-    description: ''
+    description: '',
+    proofRef: '',
+    proofFile: null as File | null
   });
   const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check proof document requirement for justification and test retake requests
+    if (['justificacao_falta', 'reposicao_teste'].includes(formData.type)) {
+      if (!formData.proofRef.trim() && !formData.proofFile) {
+        setErrorMsg('⚠️ Comprovativo Obrigatório: É obrigatório anexar/indicar o documento comprovativo (Atestado Médico, Declaração, etc.) para submeter um pedido de justificação de falta ou reposição de teste.');
+        return;
+      }
+    }
+
+    setErrorMsg('');
     submitComplaint({
       studentId: student.id,
       subjectId: formData.subjectId,
       trimester: formData.trimester,
-      description: formData.description
+      description: `[TIPO: ${formData.type.toUpperCase()}] [COMPROVATIVO: ${formData.proofRef || formData.proofFile?.name || 'SIM'}] ${formData.description}`
     });
     setSubmitted(true);
   };
@@ -791,9 +805,9 @@ const ComplaintView = ({ student }: { student: any }) => {
     return (
       <Card className="p-12 text-center border-blue-200 bg-blue-50 max-w-2xl mx-auto">
         <Send className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-blue-900">Reclamação Enviada</h2>
+        <h2 className="text-2xl font-bold text-blue-900">Pedido Submetido com Sucesso!</h2>
         <p className="text-blue-700 mt-2">
-          O seu pedido foi encaminhado para a Direção Pedagógica. Receberá uma resposta no prazo de 48 horas úteis.
+          O seu pedido com comprovativo em anexo foi encaminhado para o Docente e Direção Pedagógica.
         </p>
       </Card>
     );
@@ -803,19 +817,39 @@ const ComplaintView = ({ student }: { student: any }) => {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
       <Card className="p-8 bg-white border border-slate-200 shadow-lg rounded-2xl">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <MessageSquare className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Reclamação Académica</h2>
-            <p className="text-sm text-slate-500">Solicite revisão de notas ou esclarecimentos</p>
+            <h2 className="text-xl font-bold text-slate-800">Requerimento Académico (Faltas / Reposição de Testes)</h2>
+            <p className="text-sm text-slate-500">Submeta justificações de faltas, pedidos de reposição de testes ou reclamações</p>
           </div>
         </div>
 
+        {errorMsg && (
+          <div className="p-4 mb-4 bg-rose-50 border-2 border-rose-400 text-rose-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+            <AlertCircle size={18} className="text-rose-600 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tipo de Requerimento *</label>
+            <select
+              value={formData.type}
+              onChange={e => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
+            >
+              <option value="justificacao_falta">Justificação de Falta (Anexo de Comprovativo Obrigatório)</option>
+              <option value="reposicao_teste">Pedido de Reposição de Teste / Avaliação (Comprovativo Obrigatório)</option>
+              <option value="reclamacao_nota">Reclamação de Nota / Esclarecimento Académico</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Disciplina</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Disciplina *</label>
               <select 
                 required
                 value={formData.subjectId}
@@ -840,23 +874,61 @@ const ComplaintView = ({ student }: { student: any }) => {
             </div>
           </div>
 
+          {['justificacao_falta', 'reposicao_teste'].includes(formData.type) && (
+            <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-xl space-y-3">
+              <label className="block text-xs font-black text-amber-950 uppercase flex items-center justify-between">
+                <span>Documento Comprovativo (Obrigatório) *</span>
+                <span className="text-amber-800 text-[10px] lowercase font-semibold font-sans">Atestado Médico, Declaração, etc.</span>
+              </label>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  required={['justificacao_falta', 'reposicao_teste'].includes(formData.type)}
+                  value={formData.proofRef}
+                  onChange={e => setFormData(prev => ({ ...prev, proofRef: e.target.value }))}
+                  placeholder="N.º / Referência do Atestado ou Declaração (ex: ATEST-2026-99)"
+                  className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+
+                <label className="cursor-pointer px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 shadow-xs">
+                  <Paperclip size={14} />
+                  <span>Anexar Ficheiro</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0] || null;
+                      setFormData(prev => ({ ...prev, proofFile: f, proofRef: f ? f.name : prev.proofRef }));
+                    }}
+                  />
+                </label>
+              </div>
+              {formData.proofFile && (
+                <p className="text-[11px] font-mono font-bold text-amber-900 flex items-center gap-1">
+                  <FileText size={13} /> Ficheiro selecionado: {formData.proofFile.name}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Descrição do Problema</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Descrição do Problema / Motivo *</label>
             <textarea 
               required
               rows={4}
               value={formData.description}
               onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm resize-none"
-              placeholder="Descreva detalhadamente o motivo da sua reclamação..."
+              placeholder="Descreva detalhadamente o motivo da sua solicitação..."
             />
           </div>
 
           <button 
             type="submit"
-            className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg"
+            className="w-full py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
           >
-            Enviar Reclamação
+            <Send size={16} /> Submeter Requerimento Académico
           </button>
         </form>
       </Card>

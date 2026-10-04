@@ -10,7 +10,8 @@ import {
   HRLeave, HRPromotion, HRTraining, ReceptionVisitor, ReceptionTicket, 
   ArchiveRecord, ClassSchedule, SchoolRoom, AIPrediction, AIReportGeneration,
   SchoolTransitionBatch, IssuedCertificate, AutoRenewalSummary, Petition, UserNotification,
-  DocumentSignatureRecord, EvaluationItem, ClassTaskItem, ClassTaskSubmission, BackupRecord
+  DocumentSignatureRecord, EvaluationItem, ClassTaskItem, ClassTaskSubmission, BackupRecord,
+  DigitalLessonRecord, StudentAttendanceMark
 } from './types';
 import { initialData } from './mockData';
 import { generateEmployeeId, generateStudentId, generateIUE, generateNIM } from './data/mozambiqueLocations';
@@ -20,6 +21,7 @@ import {
   handleDirectorVacancyDecision as handleVacancyFn, 
   confirmDestinationStudentEnrollment as confirmDestEnrollmentFn 
 } from './utils/transitionEngine';
+import { computeAutoCurriculum } from './data/sigeRoles';
 
 export const defaultSmtpSettings: SmtpSettings = {
   host: 'smtp.minedh.gov.mz',
@@ -48,6 +50,7 @@ interface StoreState {
   grades: Grade[];
   examGrades: ExamGrade[];
   lessonSummaries: LessonSummary[];
+  digitalLessonRecords: DigitalLessonRecord[];
   reports: TrimesterReport[];
   issuedDeclarations: IssuedDeclaration[];
   collectionPeriods: CollectionPeriod[];
@@ -81,8 +84,10 @@ interface StoreState {
   evaluations: EvaluationItem[];
   classTasks: ClassTaskItem[];
   schoolDocuments?: any[];
+  userNotifications: UserNotification[];
   currentUser: User | null;
   highContrast: boolean;
+  activeTab: string;
 
   // Firestore Backup States
   backups: BackupRecord[];
@@ -109,7 +114,7 @@ interface StoreState {
 }
 
 interface StoreActions {
-  login: (email: string) => boolean;
+  login: (email: string, password?: string) => boolean;
   logout: () => void;
   setActiveSchoolId: (schoolId: string | null) => void;
   getSchoolTenantUrl: (schoolId: string) => string;
@@ -124,6 +129,12 @@ interface StoreActions {
   addGrade: (gradeData: Omit<Grade, 'id' | 'isLocked'>) => void;
   addExamGrade: (examGradeData: Omit<ExamGrade, 'id' | 'isLocked'>) => void;
   addLessonSummary: (summaryData: Omit<LessonSummary, 'id'>) => void;
+  digitalLessonRecords: DigitalLessonRecord[];
+  addDigitalLessonRecord: (record: Omit<DigitalLessonRecord, 'id' | 'createdAt'>) => DigitalLessonRecord;
+  updateDigitalLessonRecord: (id: string, updates: Partial<DigitalLessonRecord>) => void;
+  deleteDigitalLessonRecord: (id: string) => void;
+  pedagogicalVisaLessonRecord: (id: string, visa: { status: 'aprovado' | 'com_observacoes' | 'pendente'; reviewedBy: string; observation?: string }) => void;
+  secretariatAuditLessonRecord: (id: string, audit: { status: 'auditado' | 'arquivado'; auditedBy: string }) => void;
   submitReport: (classId: string, trimester: 1 | 2 | 3) => void;
   signReport: (reportId: string) => void;
   publishReport: (reportId: string) => void;
@@ -166,6 +177,7 @@ interface StoreActions {
   removeSchool: (id: string) => void;
   removeClass: (classId: string) => void;
   toggleHighContrast: () => void;
+  setActiveTab: (tab: string) => void;
   lockClassGrades: (classId: string) => void;
   archiveAcademicData: (year: number, classId: string) => void;
   updateUserPermissions: (userId: string, permissions: User['permissions']) => void;
@@ -229,6 +241,7 @@ interface StoreActions {
   createPetition: (petition: Omit<Petition, 'id' | 'createdAt' | 'status' | 'history'>) => void;
   updatePetitionStatus: (id: string, status: Petition['status'], action: string, role: string) => void;
   updateStudentDetails: (studentId: string, updates: Partial<Student>) => void;
+  reorganizeClasses: (schoolId: string, gradeLevel: string, maxPerClass: number) => void;
   // Firestore CRUD for User Profiles & School Documents
   saveUserProfile: (user: User) => Promise<void>;
   updateUserProfile: (userId: string, updates: Partial<User>) => Promise<void>;
@@ -246,7 +259,7 @@ interface StoreActions {
 }
 
 type StoreContextType = StoreState & StoreActions & {
-  userNotifications?: ChatMessage[];
+  userNotifications?: UserNotification[];
   notifications?: ChatMessage[];
   declarations?: IssuedDeclaration[];
   certificates?: IssuedCertificate[];
@@ -426,6 +439,7 @@ export const defaultIssuedCertificates: IssuedCertificate[] = [
 ];
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const setActiveTab = (tab: string) => setState(prev => ({ ...prev, activeTab: tab }));
   const [state, setState] = useState<StoreState>(() => {
     const saved = localStorage.getItem('eduGestaoState');
     if (saved) {
@@ -450,6 +464,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return {
           ...initialData,
           ...parsed,
+          activeTab: parsed.activeTab || 'systemHealth',
           users: (() => {
             const defaultUsers = (initialData.users as User[]) || [];
             const userMap = new Map<string, User>();
@@ -510,6 +525,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           grades: parsed.grades || initialData.grades || [],
           examGrades: parsed.examGrades || initialData.examGrades || [],
           lessonSummaries: parsed.lessonSummaries || [],
+          digitalLessonRecords: parsed.digitalLessonRecords || initialData.digitalLessonRecords || [],
           reports: parsed.reports || [],
           emailNotifications: sanitizedEmailNotifs,
           notifications: sanitizedNotifs,
@@ -564,6 +580,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       examGrades: initialData.examGrades || [],
       reports: initialData.reports || [],
       lessonSummaries: [],
+      digitalLessonRecords: initialData.digitalLessonRecords || [],
       issuedDeclarations: defaultIssuedDeclarations,
       issuedCertificates: defaultIssuedCertificates,
       documentSignatures: defaultDocumentSignatures,
@@ -792,6 +809,90 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.warn('Firestore grades sync:', error?.message || error);
     });
 
+    // Real-time sync for exam grades
+    const unsubExamGrades = onSnapshot(collection(db, 'examGrades'), (snapshot) => {
+      const items: ExamGrade[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() } as ExamGrade);
+      });
+      if (items.length > 0) {
+        setState(prev => ({ ...prev, examGrades: items }));
+      }
+    }, (error) => {
+      console.warn('Firestore examGrades sync:', error?.message || error);
+    });
+
+    // Real-time sync for collection periods
+    const unsubCollPeriods = onSnapshot(collection(db, 'collectionPeriods'), (snapshot) => {
+      const items: CollectionPeriod[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() } as CollectionPeriod);
+      });
+      if (items.length > 0) {
+        setState(prev => ({ ...prev, collectionPeriods: items }));
+      }
+    }, (error) => {
+      console.warn('Firestore collectionPeriods sync:', error?.message || error);
+    });
+
+    // Real-time sync for chat messages
+    const unsubChat = onSnapshot(collection(db, 'chatMessages'), (snapshot) => {
+      const items: ChatMessage[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() } as ChatMessage);
+      });
+      if (items.length > 0) {
+        items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setState(prev => ({ ...prev, chatMessages: items }));
+      }
+    }, (error) => {
+      console.warn('Firestore chatMessages sync:', error?.message || error);
+    });
+
+    // Real-time sync & seeding for classes
+    const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
+      const items: Class[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() } as Class);
+      });
+      if (items.length > 0) {
+        setState(prev => ({ ...prev, classes: items }));
+      } else {
+        const initialClasses = initialData.classes || [];
+        initialClasses.forEach(async (c: any) => {
+          try {
+            await setDoc(doc(db, 'classes', c.id), c);
+          } catch (err) {
+            console.warn('Seeding class failed:', err);
+          }
+        });
+      }
+    }, (error) => {
+      console.warn('Firestore classes sync:', error?.message || error);
+    });
+
+    // Real-time sync & seeding for employees
+    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
+      const items: Employee[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() } as Employee);
+      });
+      if (items.length > 0) {
+        setState(prev => ({ ...prev, employees: items }));
+      } else {
+        const initialEmployees = initialData.employees || [];
+        initialEmployees.forEach(async (e: any) => {
+          try {
+            await setDoc(doc(db, 'employees', e.id), e);
+          } catch (err) {
+            console.warn('Seeding employee failed:', err);
+          }
+        });
+      }
+    }, (error) => {
+      console.warn('Firestore employees sync:', error?.message || error);
+    });
+
     // Real-time sync for backups
     const unsubBackups = onSnapshot(collection(db, 'backups'), (snapshot) => {
       const items: BackupRecord[] = [];
@@ -820,6 +921,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       unsubStudents();
       unsubSubjects();
       unsubGrades();
+      unsubExamGrades();
+      unsubCollPeriods();
+      unsubChat();
+      unsubClasses();
+      unsubEmployees();
       unsubBackups();
     };
   }, []);
@@ -894,15 +1000,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [isGlobalView, state.schools, effectiveSchoolId]);
 
   // Tenant Isolated Collections (Memoized to guarantee reference stability and prevent cascading re-renders)
-  const tenantStudents = useMemo(() => 
-    isGlobalView ? (state.students || []) : (state.students || []).filter(s => s.schoolId === effectiveSchoolId),
-    [state.students, effectiveSchoolId, isGlobalView]
-  );
+  const tenantClasses = useMemo(() => {
+    let list = isGlobalView ? (state.classes || []) : (state.classes || []).filter(c => c.schoolId === effectiveSchoolId);
+    if (!isGlobalView && activeSchool?.schoolTypes && activeSchool.schoolTypes.length > 0) {
+      const allowed = computeAutoCurriculum(activeSchool.schoolTypes).classes;
+      list = list.filter(c => allowed.some(a => (c.gradeLevel || '').toLowerCase().includes(a.toLowerCase().replace('la', 'ª').replace(' .', '.')) || a.toLowerCase().includes((c.gradeLevel || '').toLowerCase())));
+    }
+    return list;
+  }, [state.classes, effectiveSchoolId, isGlobalView, activeSchool]);
 
-  const tenantClasses = useMemo(() => 
-    isGlobalView ? (state.classes || []) : (state.classes || []).filter(c => c.schoolId === effectiveSchoolId),
-    [state.classes, effectiveSchoolId, isGlobalView]
-  );
+  const tenantStudents = useMemo(() => {
+    let list = isGlobalView ? (state.students || []) : (state.students || []).filter(s => s.schoolId === effectiveSchoolId);
+    if (!isGlobalView && activeSchool?.schoolTypes && activeSchool.schoolTypes.length > 0) {
+      const allowedClassIds = new Set(tenantClasses.map(c => c.id));
+      list = list.filter(s => !s.classId || allowedClassIds.has(s.classId));
+    }
+    return list;
+  }, [state.students, effectiveSchoolId, isGlobalView, activeSchool, tenantClasses]);
 
   const tenantEmployees = useMemo(() => 
     isGlobalView ? (state.employees || []) : (state.employees || []).filter(e => e.schoolId === effectiveSchoolId),
@@ -1014,7 +1128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [state.issuedCertificates, effectiveSchoolId, isGlobalView]
   );
 
-  const login = (emailOrId: string) => {
+  const login = (emailOrId: string, password?: string) => {
     const cleanInput = emailOrId.trim().toLowerCase();
 
     // Role alias and email mapping dictionary for seamless test login
@@ -1031,10 +1145,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       'diretor': 'diretor@escola.com',
       'director': 'diretor@escola.com',
       'secretaria': 'secretaria@escola.com',
+      'chefe': 'secretaria@escola.com',
+      'chefe da secretaria': 'secretaria@escola.com',
+      'chefe secretaria': 'secretaria@escola.com',
       'distrital': 'distrital@gov.mz',
+      'gestor distrital': 'distrital@gov.mz',
       'provincial': 'provincial@gov.mz',
+      'gestor provincial': 'provincial@gov.mz',
       'ministro': 'ministro@gov.mz',
       'nacional': 'ministro@gov.mz',
+      'gestor do ministerio': 'ministro@gov.mz',
+      'gestor ministério': 'ministro@gov.mz',
       'encarregado': 'encarregado@escola.com',
       'guardian': 'encarregado@escola.com',
       'rh': 'rh@escola.com',
@@ -1042,6 +1163,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       'património': 'patrimonio@escola.com',
       'financas': 'financas@escola.com',
       'finanças': 'financas@escola.com',
+      'financeiro': 'financas@escola.com',
+      'gestor financeiro': 'financas@escola.com',
       'recepcao': 'recepcao@escola.com',
       'recepção': 'recepcao@escola.com',
       'arquivo': 'arquivo@escola.com',
@@ -1056,6 +1179,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       u.email.toLowerCase() === targetEmail || 
       u.email.toLowerCase() === cleanInput ||
       u.id.toLowerCase() === cleanInput ||
+      u.name.toLowerCase() === cleanInput ||
       u.role.toLowerCase() === cleanInput
     );
 
@@ -1065,11 +1189,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         u.email.toLowerCase() === targetEmail ||
         u.email.toLowerCase() === cleanInput ||
         u.id.toLowerCase() === cleanInput ||
+        u.name.toLowerCase() === cleanInput ||
         u.role.toLowerCase() === cleanInput
       );
     }
 
     if (user) {
+      if (password && user.password && user.password.trim() !== password.trim()) {
+        return false;
+      }
       sessionStorage.setItem('isFreshLogin', 'true');
       setState(prev => ({
         ...prev,
@@ -1115,11 +1243,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const addCollectionPeriod = (period: Omit<CollectionPeriod, 'id' | 'createdAt'>) => {
+    const newId = `period-${Date.now()}`;
     const newPeriod: CollectionPeriod = {
       ...period,
-      id: `period-${Date.now()}`,
+      id: newId,
       createdAt: new Date().toISOString()
     };
+    
+    // Persist to Firestore
+    setDoc(doc(db, 'collectionPeriods', newId), newPeriod).catch(err => {
+      console.warn('Firestore addCollectionPeriod failed:', err);
+    });
+
     setState(prev => ({
       ...prev,
       collectionPeriods: [...prev.collectionPeriods, newPeriod]
@@ -1127,6 +1262,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const publishCollectionPeriod = (id: string) => {
+    // Persist to Firestore
+    updateDoc(doc(db, 'collectionPeriods', id), { status: 'published' }).catch(err => {
+      console.warn('Firestore publishCollectionPeriod failed:', err);
+    });
+
     setState(prev => ({
       ...prev,
       collectionPeriods: prev.collectionPeriods.map(p => p.id === id ? { ...p, status: 'published' } : p)
@@ -1134,12 +1274,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const submitCollectionForm = (formData: Omit<CollectionForm, 'id' | 'submittedAt'>) => {
+    const newId = `form-${Date.now()}`;
     const newForm: CollectionForm = {
       ...formData,
-      id: `form-${Date.now()}`,
+      id: newId,
       submittedAt: new Date().toISOString(),
       status: 'submitted'
     };
+
+    // Persist to Firestore
+    setDoc(doc(db, 'collectionForms', newId), newForm).catch(err => {
+      console.warn('Firestore submitCollectionForm failed:', err);
+    });
+
     setState(prev => ({
       ...prev,
       collectionForms: [...prev.collectionForms, newForm]
@@ -1147,11 +1294,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const sendChatMessage = (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    const newId = `msg-${Date.now()}`;
     const newMessage: ChatMessage = {
       ...msg,
-      id: `msg-${Date.now()}`,
+      id: newId,
       timestamp: new Date().toISOString()
     };
+
+    // Persist to Firestore
+    setDoc(doc(db, 'chatMessages', newId), newMessage).catch(err => {
+      console.warn('Firestore sendChatMessage failed:', err);
+    });
+
     setState(prev => ({
       ...prev,
       chatMessages: [...prev.chatMessages, newMessage]
@@ -1294,8 +1448,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return prev;
       }
 
-      const updatedGrades = prev.grades.map(g => g.classId === classId ? { ...g, isLocked: true } : g);
-      const updatedExamGrades = prev.examGrades.map(eg => eg.classId === classId ? { ...eg, isLocked: true } : eg);
+      const updatedGrades = prev.grades.map(g => {
+        if (g.classId === classId && !g.isLocked) {
+          const updated = { ...g, isLocked: true };
+          // Persist each lock to Firestore
+          updateDoc(doc(db, 'grades', g.id), { isLocked: true }).catch(() => {});
+          return updated;
+        }
+        return g;
+      });
+      const updatedExamGrades = prev.examGrades.map(eg => {
+        if (eg.classId === classId && !eg.isLocked) {
+          const updated = { ...eg, isLocked: true };
+          // Persist each lock to Firestore
+          updateDoc(doc(db, 'examGrades', eg.id), { isLocked: true }).catch(() => {});
+          return updated;
+        }
+        return eg;
+      });
       
       let updatedNotifs = prev.emailNotifications;
 
@@ -1592,10 +1762,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // 1. Director da Escola
     if (newSchool.directorName && newSchool.directorName.trim()) {
       const directorUserId = `usr-dir-${Date.now()}-1`;
+      const email = newSchool.directorEmail || `diretor.${schoolId}@minedh.gov.mz`;
       createdUsers.push({
         id: directorUserId,
         name: newSchool.directorName.trim(),
-        email: `diretor.${schoolId}@minedh.gov.mz`,
+        email: email,
+        password: newSchool.directorPassword || '123456',
         role: 'director',
         schoolId: schoolId,
         provinceId: newSchool.province
@@ -1606,9 +1778,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         schoolId: schoolId,
         name: newSchool.directorName.trim(),
         gender: 'Masculino',
-        nuit: `${Math.floor(100000000 + Math.random() * 900000000)}`,
-        email: `diretor.${schoolId}@minedh.gov.mz`,
-        phone: newSchool.phone || '+258 84 000 0000',
+        nuit: newSchool.directorNip || `${Math.floor(100000000 + Math.random() * 900000000)}`,
+        email: email,
+        phone: newSchool.directorPhone || newSchool.phone || '+258 84 000 0000',
         maritalStatus: 'Casado(a)',
         fatherName: 'N/A',
         motherName: 'N/A',
@@ -1622,7 +1794,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         address: newSchool.address || 'Sede da Escola',
         neighborhood: newSchool.locality || 'Centro',
         residenceDistrict: newSchool.district || 'Sede',
-        cell: newSchool.phone || '+258 84 000 0000',
+        cell: newSchool.directorPhone || newSchool.phone || '+258 84 000 0000',
         blockNo: '1',
         houseNo: '12',
         childrenCount: 2,
@@ -1644,10 +1816,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // 2. Director Adjunto Pedagógico (DAP)
     if (newSchool.dapName && newSchool.dapName.trim()) {
       const dapUserId = `usr-dap-${Date.now()}-2`;
+      const email = newSchool.dapEmail || `dap.${schoolId}@minedh.gov.mz`;
       createdUsers.push({
         id: dapUserId,
         name: newSchool.dapName.trim(),
-        email: `dap.${schoolId}@minedh.gov.mz`,
+        email: email,
+        password: newSchool.dapPassword || '123456',
         role: 'pedagogical',
         schoolId: schoolId,
         provinceId: newSchool.province
@@ -1658,9 +1832,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         schoolId: schoolId,
         name: newSchool.dapName.trim(),
         gender: 'Feminino',
-        nuit: `${Math.floor(100000000 + Math.random() * 900000000)}`,
-        email: `dap.${schoolId}@minedh.gov.mz`,
-        phone: newSchool.phone || '+258 82 000 0000',
+        nuit: newSchool.dapNip || `${Math.floor(100000000 + Math.random() * 900000000)}`,
+        email: email,
+        phone: newSchool.dapPhone || newSchool.phone || '+258 82 000 0000',
         maritalStatus: 'Casado(a)',
         fatherName: 'N/A',
         motherName: 'N/A',
@@ -1674,7 +1848,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         address: newSchool.address || 'Sede da Escola',
         neighborhood: newSchool.locality || 'Centro',
         residenceDistrict: newSchool.district || 'Sede',
-        cell: newSchool.phone || '+258 82 000 0000',
+        cell: newSchool.dapPhone || newSchool.phone || '+258 82 000 0000',
         blockNo: '2',
         houseNo: '14',
         childrenCount: 3,
@@ -1696,10 +1870,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // 3. Chefe da Secretaria
     if (newSchool.secretariatChiefName && newSchool.secretariatChiefName.trim()) {
       const secUserId = `usr-sec-${Date.now()}-3`;
+      const email = newSchool.secretariatEmail || `secretaria.${schoolId}@minedh.gov.mz`;
       createdUsers.push({
         id: secUserId,
         name: newSchool.secretariatChiefName.trim(),
-        email: `secretaria.${schoolId}@minedh.gov.mz`,
+        email: email,
+        password: newSchool.secretariatPassword || '123456',
         role: 'secretariat',
         schoolId: schoolId,
         provinceId: newSchool.province
@@ -1710,9 +1886,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         schoolId: schoolId,
         name: newSchool.secretariatChiefName.trim(),
         gender: 'Feminino',
-        nuit: `${Math.floor(100000000 + Math.random() * 900000000)}`,
-        email: `secretaria.${schoolId}@minedh.gov.mz`,
-        phone: newSchool.phone || '+258 87 000 0000',
+        nuit: newSchool.secretariatNip || `${Math.floor(100000000 + Math.random() * 900000000)}`,
+        email: email,
+        phone: newSchool.secretariatPhone || newSchool.phone || '+258 87 000 0000',
         maritalStatus: 'Solteiro(a)',
         fatherName: 'N/A',
         motherName: 'N/A',
@@ -1741,6 +1917,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         trainingArea: 'Administração Escolar e Gestão',
         leadershipRole: 'Chefe da Secretaria',
         department: 'Secretaria',
+        taughtSubjects: []
+      });
+    }
+
+    // 4. Gestor Financeiro / Tesoureiro
+    if (newSchool.financialChiefName && newSchool.financialChiefName.trim()) {
+      const finUserId = `usr-fin-${Date.now()}-4`;
+      const email = newSchool.financialEmail || `financas.${schoolId}@minedh.gov.mz`;
+      createdUsers.push({
+        id: finUserId,
+        name: newSchool.financialChiefName.trim(),
+        email: email,
+        password: newSchool.financialPassword || '123456',
+        role: 'financial',
+        schoolId: schoolId,
+        provinceId: newSchool.province
+      });
+
+      createdEmployees.push({
+        id: `emp-fin-${Date.now()}-4`,
+        schoolId: schoolId,
+        name: newSchool.financialChiefName.trim(),
+        gender: 'Masculino',
+        nuit: newSchool.financialNip || `${Math.floor(100000000 + Math.random() * 900000000)}`,
+        email: email,
+        phone: newSchool.financialPhone || newSchool.phone || '+258 85 000 0000',
+        maritalStatus: 'Casado(a)',
+        fatherName: 'N/A',
+        motherName: 'N/A',
+        idCardNumber: `050${Math.floor(100000 + Math.random() * 900000)}M`,
+        idCardIssuedAt: newSchool.province || 'Maputo',
+        idCardIssuedDate: '2022-02-14',
+        nationality: 'Moçambicana',
+        birthProvince: newSchool.province || 'Maputo Cidade',
+        birthDistrict: newSchool.district || 'KaMpfumo',
+        birthDate: '1985-09-10',
+        address: newSchool.address || 'Sede da Escola',
+        neighborhood: newSchool.locality || 'Centro',
+        residenceDistrict: newSchool.district || 'Sede',
+        cell: newSchool.financialPhone || newSchool.phone || '+258 85 000 0000',
+        blockNo: '4',
+        houseNo: '22',
+        childrenCount: 2,
+        career: 'Técnico de Finanças e Tesouraria',
+        category: 'Gestão Financeira',
+        roleFunction: 'Gestor Financeiro',
+        isEffective: 'Sim',
+        contractType: 'Nomeação Definitiva',
+        contractLink: 'Quadro de Nomeação',
+        admissionDate: new Date().toISOString().split('T')[0],
+        academicLevel: 'Licenciatura',
+        trainingArea: 'Contabilidade e Gestão Financeira',
+        leadershipRole: 'Gestor Financeiro',
+        department: 'Finanças e Tesouraria',
         taughtSubjects: []
       });
     }
@@ -2060,6 +2290,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    // Persist all to Firestore
+    const persistData = async () => {
+      try {
+        await setDoc(doc(db, 'schools', schoolId), newSchool);
+        for (const u of createdUsers) await setDoc(doc(db, 'users', u.id), u);
+        for (const e of createdEmployees) await setDoc(doc(db, 'employees', e.id), e);
+        for (const c of createdClasses) await setDoc(doc(db, 'classes', c.id), c);
+      } catch (err) {
+        console.warn('Firestore addSchool batch persistence failed:', err);
+      }
+    };
+    persistData();
+
     setState(prev => ({
       ...prev,
       schools: [...prev.schools, newSchool],
@@ -2074,6 +2317,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...prev,
       schools: prev.schools.filter(s => s.id !== id)
     }));
+    
+    // Persist to Firestore
+    deleteDoc(doc(db, 'schools', id)).catch(err => console.warn('Firestore removeSchool failed:', err));
   };
 
   const removeClass = (classId: string) => {
@@ -2081,6 +2327,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...prev,
       classes: prev.classes.filter(c => c.id !== classId)
     }));
+    
+    // Persist to Firestore
+    deleteDoc(doc(db, 'classes', classId)).catch(err => console.warn('Firestore removeClass failed:', err));
   };
 
   const enrollStudent = (studentData: Omit<Student, 'id' | 'classId' | 'status'> & { id?: string }) => {
@@ -2118,6 +2367,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // Ensure no duplicates
       const filtered = prev.students.filter(s => s.id !== newStudent.id && s.iue !== newStudent.iue);
+      
+      // Persist to Firestore
+      setDoc(doc(db, 'students', studentId), newStudent).catch(err => {
+        console.warn('Firestore student enrollment failed:', err);
+      });
+
       return { ...prev, students: [...filtered, newStudent] };
     });
   };
@@ -2147,6 +2402,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Avoid duplicate ID
       const filteredEmployees = (prev.employees || []).filter(e => e.id !== newEmployee.id);
       const filteredUsers = (prev.users || []).filter(u => u.email.toLowerCase() !== empEmail.toLowerCase());
+      
+      // Persist to Firestore
+      setDoc(doc(db, 'employees', generatedId), newEmployee).catch(err => {
+        console.warn('Firestore employee write failed:', err);
+      });
+      setDoc(doc(db, 'users', newUser.id), newUser).catch(err => {
+        console.warn('Firestore user write (for employee) failed:', err);
+      });
+
       return { 
         ...prev, 
         employees: [...filteredEmployees, newEmployee],
@@ -2167,9 +2431,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } : e
       )
     }));
+    
+    // Persist to Firestore
+    updateDoc(doc(db, 'employees', employeeId), { 
+      schoolId, 
+      allocatedBy: role,
+      allocationDate: new Date().toISOString()
+    }).catch(err => console.warn('Firestore allocateEmployee failed:', err));
   };
 
   const verifyEmployee = (employeeId: string, verifierName: string) => {
+    const verifiedAt = new Date().toISOString();
     setState(prev => ({
       ...prev,
       employees: (prev.employees || []).map(e => 
@@ -2177,10 +2449,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...e, 
           status: 'validado' as const,
           verifiedBy: verifierName,
-          verifiedAt: new Date().toISOString()
+          verifiedAt
         } : e
       )
     }));
+
+    // Persist to Firestore
+    updateDoc(doc(db, 'employees', employeeId), { 
+      status: 'validado',
+      verifiedBy: verifierName,
+      verifiedAt
+    }).catch(err => console.warn('Firestore verifyEmployee failed:', err));
   };
 
   const deleteEmployee = (id: string) => {
@@ -2188,6 +2467,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...prev,
       employees: (prev.employees || []).filter(e => e.id !== id)
     }));
+    
+    // Persist to Firestore
+    deleteDoc(doc(db, 'employees', id)).catch(err => console.warn('Firestore deleteEmployee failed:', err));
   };
 
   const updateEmployee = (id: string, data: Partial<Employee>) => {
@@ -2195,6 +2477,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...prev,
       employees: (prev.employees || []).map(e => e.id === id ? { ...e, ...data } : e)
     }));
+    
+    // Persist to Firestore
+    updateDoc(doc(db, 'employees', id), data as any).catch(err => console.warn('Firestore updateEmployee failed:', err));
   };
 
   const assignTeacherCompetencyRole = (employeeId: string, competency: {
@@ -2241,7 +2526,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           delegadoCicloType = competency.ciclo;
         }
 
-        return {
+        const updatedEmp = {
           ...emp,
           competencyRoles: updatedRoles,
           isDiretorTurma,
@@ -2253,6 +2538,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           isDelegadoCiclo,
           delegadoCicloType
         };
+
+        // Persist to Firestore
+        updateDoc(doc(db, 'employees', employeeId), updatedEmp as any).catch(err => console.warn('Firestore assignTeacherCompetencyRole failed:', err));
+
+        return updatedEmp;
       });
 
       return { ...prev, employees: emps };
@@ -2264,7 +2554,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const emps = (prev.employees || []).map(emp => {
         if (emp.id !== employeeId) return emp;
         const updatedRoles = (emp.competencyRoles || []).filter(r => r.roleType !== roleType);
-        return {
+        const updatedEmp = {
           ...emp,
           competencyRoles: updatedRoles,
           isDiretorTurma: roleType === 'diretor_turma' ? false : emp.isDiretorTurma,
@@ -2276,6 +2566,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           isDelegadoCiclo: roleType === 'delegado_ciclo' ? false : emp.isDelegadoCiclo,
           delegadoCicloType: roleType === 'delegado_ciclo' ? undefined : emp.delegadoCicloType
         };
+
+        // Persist to Firestore
+        updateDoc(doc(db, 'employees', employeeId), updatedEmp as any).catch(err => console.warn('Firestore removeTeacherCompetencyRole failed:', err));
+
+        return updatedEmp;
       });
       return { ...prev, employees: emps };
     });
@@ -2326,11 +2621,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             year: new Date().getFullYear(),
           };
           currentClassList.push(targetClass);
+          
+          // Persist new class to Firestore
+          setDoc(doc(db, 'classes', targetClass.id), targetClass).catch(err => {
+            console.warn('Firestore assignClasses new class failed:', err);
+          });
         }
 
         const studentToUpdate = updatedStudents.find(s => s.id === student.id);
         if (studentToUpdate) {
           studentToUpdate.classId = targetClass.id;
+          
+          // Persist student update to Firestore
+          updateDoc(doc(db, 'students', student.id), { classId: targetClass.id }).catch(err => {
+            console.warn('Firestore assignClasses student update failed:', err);
+          });
         }
       });
 
@@ -2392,6 +2697,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         launchedAt: new Date().toISOString()
       };
 
+      // Persist to Firestore
+      setDoc(doc(db, 'examGrades', newExamGrade.id), newExamGrade).catch(err => {
+        console.warn('Firestore addExamGrade failed:', err);
+      });
+
       let newExamGrades = [...(prev.examGrades || [])];
       if (existingIndex >= 0) {
         newExamGrades[existingIndex] = newExamGrade;
@@ -2411,6 +2721,107 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       lessonSummaries: [...(prev.lessonSummaries || []), newSummary]
+    }));
+  };
+
+  const addDigitalLessonRecord = (record: Omit<DigitalLessonRecord, 'id' | 'createdAt'>): DigitalLessonRecord => {
+    const totalStudents = record.attendanceRecords?.length || 0;
+    const presentCount = record.attendanceRecords?.filter(r => r.status === 'P').length || 0;
+    const justifiedAbsenceCount = record.attendanceRecords?.filter(r => r.status === 'FJ').length || 0;
+    const unjustifiedAbsenceCount = record.attendanceRecords?.filter(r => r.status === 'FI').length || 0;
+    const lateCount = record.attendanceRecords?.filter(r => r.status === 'A').length || 0;
+    const attendanceRate = totalStudents > 0 ? Number((((presentCount + lateCount) / totalStudents) * 100).toFixed(1)) : 100;
+
+    const newRecord: DigitalLessonRecord = {
+      ...record,
+      id: `dlr-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      attendanceSummary: record.attendanceSummary || {
+        totalStudents,
+        presentCount,
+        justifiedAbsenceCount,
+        unjustifiedAbsenceCount,
+        lateCount,
+        attendanceRate,
+      },
+    };
+
+    setState(prev => ({
+      ...prev,
+      digitalLessonRecords: [newRecord, ...(prev.digitalLessonRecords || [])],
+    }));
+
+    return newRecord;
+  };
+
+  const updateDigitalLessonRecord = (id: string, updates: Partial<DigitalLessonRecord>) => {
+    setState(prev => ({
+      ...prev,
+      digitalLessonRecords: (prev.digitalLessonRecords || []).map(item => {
+        if (item.id !== id) return item;
+        const updated = { ...item, ...updates };
+        if (updates.attendanceRecords) {
+          const totalStudents = updates.attendanceRecords.length;
+          const presentCount = updates.attendanceRecords.filter(r => r.status === 'P').length;
+          const justifiedAbsenceCount = updates.attendanceRecords.filter(r => r.status === 'FJ').length;
+          const unjustifiedAbsenceCount = updates.attendanceRecords.filter(r => r.status === 'FI').length;
+          const lateCount = updates.attendanceRecords.filter(r => r.status === 'A').length;
+          const attendanceRate = totalStudents > 0 ? Number((((presentCount + lateCount) / totalStudents) * 100).toFixed(1)) : 100;
+          updated.attendanceSummary = {
+            totalStudents,
+            presentCount,
+            justifiedAbsenceCount,
+            unjustifiedAbsenceCount,
+            lateCount,
+            attendanceRate,
+          };
+        }
+        return updated;
+      }),
+    }));
+  };
+
+  const deleteDigitalLessonRecord = (id: string) => {
+    setState(prev => ({
+      ...prev,
+      digitalLessonRecords: (prev.digitalLessonRecords || []).filter(item => item.id !== id),
+    }));
+  };
+
+  const pedagogicalVisaLessonRecord = (id: string, visa: { status: 'aprovado' | 'com_observacoes' | 'pendente'; reviewedBy: string; observation?: string }) => {
+    setState(prev => ({
+      ...prev,
+      digitalLessonRecords: (prev.digitalLessonRecords || []).map(item => {
+        if (item.id !== id) return item;
+        return {
+          ...item,
+          pedagogicalVisa: {
+            status: visa.status,
+            reviewedBy: visa.reviewedBy,
+            reviewedAt: new Date().toISOString(),
+            observation: visa.observation,
+            visaNumber: `DAP-VISTO-${Math.floor(1000 + Math.random() * 9000)}`,
+          },
+        };
+      }),
+    }));
+  };
+
+  const secretariatAuditLessonRecord = (id: string, audit: { status: 'auditado' | 'arquivado'; auditedBy: string }) => {
+    setState(prev => ({
+      ...prev,
+      digitalLessonRecords: (prev.digitalLessonRecords || []).map(item => {
+        if (item.id !== id) return item;
+        return {
+          ...item,
+          secretariatVisa: {
+            status: audit.status,
+            auditedBy: audit.auditedBy,
+            auditedAt: new Date().toISOString(),
+            termNumber: `SEC-AUDIT-${Math.floor(1000 + Math.random() * 9000)}`,
+          },
+        };
+      }),
     }));
   };
 
@@ -3001,9 +3412,98 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         fullName: updates.name || updates.fullName || student.fullName || student.name,
         updatedAt: new Date().toISOString().split('T')[0]
       };
+
+      // Persist to Firestore
+      updateDoc(doc(db, 'students', studentId), updates as any).catch(err => {
+        console.warn('Firestore updateStudentDetails failed:', err);
+      });
+
       return {
         ...prev,
         students: prev.students.map(s => s.id === studentId ? updatedStudent : s)
+      };
+    });
+  };
+
+  const reorganizeClasses = (schoolId: string, gradeLevel: string, maxPerClass: number) => {
+    setState(prev => {
+      const gradeStudents = prev.students.filter(s => s.schoolId === schoolId && s.gradeLevel === gradeLevel);
+      if (gradeStudents.length === 0) return prev;
+
+      const normalStudents = gradeStudents.filter(s => s.entryType !== 'repetente');
+      const repeatingStudents = gradeStudents.filter(s => s.entryType === 'repetente');
+
+      const getBirthYear = (s: Student) => {
+        if (!s.birthDate) return 2010;
+        const parts = s.birthDate.split('-');
+        return parseInt(parts[0], 10) || 2010;
+      };
+
+      const sortHelper = (a: Student, b: Student) => {
+        const yearA = getBirthYear(a);
+        const yearB = getBirthYear(b);
+        if (yearA !== yearB) {
+          return yearB - yearA; // Youngest first (e.g. 2012 before 2010)
+        }
+        return a.name.localeCompare(b.name, 'pt-PT', { sensitivity: 'base' });
+      };
+
+      const sortedNormal = [...normalStudents].sort(sortHelper);
+      const sortedRepeating = [...repeatingStudents].sort(sortHelper);
+
+      const allSorted = [...sortedNormal, ...sortedRepeating];
+
+      const turmasLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+      const currentClasses = [...prev.classes];
+      const updatedStudents = [...prev.students];
+
+      const filteredClasses = currentClasses.filter(c => !(c.schoolId === schoolId && c.gradeLevel === gradeLevel));
+      
+      const newClasses: Class[] = [];
+
+      allSorted.forEach((student, index) => {
+        const classIndex = Math.floor(index / maxPerClass);
+        const letter = turmasLetters[classIndex] || 'X';
+        const className = `Turma ${letter}`;
+
+        let targetClass = newClasses.find(c => c.name === className);
+        if (!targetClass) {
+          targetClass = {
+            id: `cls-${schoolId}-${gradeLevel.replace(/\s+/g, '')}-${letter}`,
+            schoolId,
+            name: className,
+            gradeLevel,
+            year: new Date().getFullYear(),
+            period: 'Manhã',
+          };
+          newClasses.push(targetClass);
+          
+          // Persist new class to Firestore
+          setDoc(doc(db, 'classes', targetClass.id), targetClass).catch(err => {
+            console.warn('Firestore reorganizeClasses new class failed:', err);
+          });
+        }
+
+        const studentIdx = updatedStudents.findIndex(s => s.id === student.id);
+        if (studentIdx !== -1) {
+          updatedStudents[studentIdx] = {
+            ...updatedStudents[studentIdx],
+            classId: targetClass.id,
+          };
+          
+          // Persist student assignment to Firestore
+          updateDoc(doc(db, 'students', student.id), { classId: targetClass.id }).catch(err => {
+            console.warn('Firestore reorganizeClasses student update failed:', err);
+          });
+        }
+      });
+
+      const finalClassesList = [...filteredClasses, ...newClasses];
+
+      return {
+        ...prev,
+        classes: finalClassesList,
+        students: updatedStudents,
       };
     });
   };
@@ -3440,6 +3940,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Store Actions
       login,
       logout,
+      setActiveTab,
       enrollStudent,
       addEmployee,
       allocateEmployee,
@@ -3453,6 +3954,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addGrade,
       addExamGrade,
       addLessonSummary,
+      digitalLessonRecords: state.digitalLessonRecords || [],
+      addDigitalLessonRecord,
+      updateDigitalLessonRecord,
+      deleteDigitalLessonRecord,
+      pedagogicalVisaLessonRecord,
+      secretariatAuditLessonRecord,
       submitTaskAnswer,
       gradeTaskSubmission,
       submitReport,
@@ -3514,6 +4021,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createPetition,
       updatePetitionStatus,
       updateStudentDetails,
+      reorganizeClasses,
       saveUserProfile,
       updateUserProfile,
       deleteUserProfile,
@@ -3527,7 +4035,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markNotificationAsRead,
       triggerAutomatedBackup,
       toggleAutoBackup,
-      userNotifications: state.chatMessages,
+      userNotifications: state.userNotifications,
       notifications: state.chatMessages,
       declarations: tenantIssuedDeclarations,
       certificates: tenantIssuedCertificates

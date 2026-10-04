@@ -318,8 +318,11 @@ export const SystemHealthDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Filters Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+      {/* Filters Toolbar and Logs Table - Hidden per request */}
+      {false && (
+        <>
+          {/* Filters Toolbar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row items-center gap-3">
           {/* Search bar */}
           <div className="relative flex-1 w-full">
@@ -538,6 +541,8 @@ export const SystemHealthDashboard: React.FC = () => {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Selected Log AI Modal */}
       {selectedLog && (

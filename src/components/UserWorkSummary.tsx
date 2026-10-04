@@ -35,7 +35,18 @@ export function UserWorkSummary({ role }: UserWorkSummaryProps) {
   const safeSubjects = subjects || [];
   const safeReports = reports || [];
 
-  const userRole = role || currentUser?.role || 'secretaria';
+  const rawRole = role || currentUser?.role || 'secretaria';
+  let normalizedKey = 'secretaria';
+  if (rawRole === 'director' || rawRole === 'diretor') normalizedKey = 'diretor';
+  else if (rawRole.startsWith('pedagogical') || rawRole === 'pedagogico') normalizedKey = 'pedagogico';
+  else if (rawRole === 'teacher' || rawRole === 'professor') normalizedKey = 'professor';
+  else if (rawRole === 'student' || rawRole === 'aluno') normalizedKey = 'aluno';
+  else if (rawRole === 'guardian' || rawRole === 'encarregado') normalizedKey = 'encarregado';
+  else if (rawRole === 'admin') normalizedKey = 'admin';
+  else if (['national', 'provincial', 'district', 'governance'].includes(rawRole)) normalizedKey = 'governance';
+  else if (rawRole.startsWith('financial') || rawRole.includes('financas')) normalizedKey = 'financial';
+
+  const userRole = normalizedKey;
 
   // Role specific definitions
   const roleInfo: Record<string, {
@@ -235,6 +246,30 @@ export function UserWorkSummary({ role }: UserWorkSummaryProps) {
       scope: `Supervisão Macro Educativa Nacional`,
       icon: Building2,
       badgeColor: "bg-cyan-100 text-cyan-800 border-cyan-200"
+    },
+    financial: {
+      title: "Gestão Financeira & Tesouraria Escolar",
+      subtitle: "Responsável pelo controlo de receitas, propinas, taxas de matrícula, despesas de fundo de maneio e prestação de contas.",
+      responsibilities: [
+        "Registo e cobrança de propinas, mensalidades e emolumentos escolares",
+        "Emissão de recibos oficiais e conciliação de pagamentos (M-Pesa, Banco)",
+        "Controlo das despesas operacionais e fundo de maneio da escola",
+        "Elaboração do balancete e relatórios de execução orçamental MINEDH"
+      ],
+      canAccess: [
+        "Painel de tesouraria, caixa diário e balancete financeiro oficial",
+        "Emissão de recibos de pagamento de propinas e taxas escolares",
+        "Relatórios de receitas e despesas da instituição",
+        "Módulo de cobranças e notificações de propinas em atraso"
+      ],
+      cannotAccess: [
+        "Alteração de pautas ou notas pedagógicas dos estudantes",
+        "Edição do cadastro escolar sem autorização da Direcção ou Secretaria",
+        "Lançamento de sumários ou alterações em exames pedagógicos"
+      ],
+      scope: `Gestão Orçamental & Tesouraria Escolar`,
+      icon: Briefcase,
+      badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
     }
   };
 

@@ -82,12 +82,6 @@ export const ReportLayout: React.FC<ReportLayoutProps> = ({
         </div>
 
         <div className="relative z-10 text-center space-y-4">
-          <img 
-            src={MOZAMBIQUE_EMBLEM_URL} 
-            alt="República de Moçambique" 
-            className="h-24 w-24 object-contain mx-auto mb-4" 
-            referrerPolicy="no-referrer"
-          />
           <h1 className="text-sm font-bold tracking-[0.3em] uppercase font-sans text-slate-900">
             {institution}
           </h1>

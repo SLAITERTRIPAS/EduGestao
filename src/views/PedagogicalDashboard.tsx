@@ -46,15 +46,18 @@ import { NationalHierarchyStatisticsWorkflow } from "../components/NationalHiera
 import { SchoolNotificationAlerts } from "../components/SchoolNotificationAlerts";
 import { UserWorkSummary } from "../components/UserWorkSummary";
 import { UnifiedRoleStatisticsView } from "../components/UnifiedRoleStatisticsView";
+import { DigitalClassBookManager } from "../components/DigitalClassBookManager";
+import { LessonPlannerManager } from "../components/LessonPlannerManager";
 import { Layers } from "lucide-react";
 
 type Tab =
   | "overview"
+  | "gestao_aulas"
+  | "livro_turma"
   | "calendar"
   | "messages"
   | "reports"
   | "statistics"
-  | "signature"
   | "pautas"
   | "exames"
   | "horarios"
@@ -79,6 +82,7 @@ export function PedagogicalDashboard() {
     currentUser,
     schools,
     employees,
+    addEmployee,
     assignTeacherCompetencyRole,
     removeTeacherCompetencyRole,
   } = useStore();
@@ -309,9 +313,70 @@ export function PedagogicalDashboard() {
     email: "",
     telefone: "",
     ciclo: "",
-    disciplina: "",
-    classe: "",
+    disciplinas: [""] as string[],
+    classes: [""] as string[],
   });
+
+  const addLocalSubjectField = () => setNewDocente(prev => ({ ...prev, disciplinas: [...prev.disciplinas, ""] }));
+  const addLocalClassField = () => setNewDocente(prev => ({ ...prev, classes: [...prev.classes, ""] }));
+
+  const handleSaveDocente = () => {
+    if (!newDocente.nome.trim()) {
+      alert("Por favor, preencha o nome do docente.");
+      return;
+    }
+
+    const employeeData: any = {
+      schoolId: currentUser?.schoolId || 's1',
+      name: newDocente.nome.trim(),
+      email: newDocente.email.trim(),
+      phone: newDocente.telefone.trim(),
+      career: "Docente",
+      academicLevel: "Licenciatura",
+      trainingArea: newDocente.disciplinas[0] || "",
+      taughtSubjects: newDocente.disciplinas.filter(Boolean),
+      gender: "M",
+      nuit: "000000000",
+      maritalStatus: "Solteiro",
+      fatherName: "",
+      motherName: "",
+      idCardNumber: "",
+      idCardIssuedAt: "",
+      idCardIssuedDate: "",
+      nationality: "Moçambicana",
+      birthProvince: "",
+      birthDistrict: "",
+      birthDate: "",
+      address: "",
+      neighborhood: "",
+      residenceDistrict: "",
+      cell: "",
+      blockNo: "",
+      houseNo: "",
+      childrenCount: 0,
+      category: "Docente",
+      roleFunction: "Professor",
+      isEffective: "Sim",
+      contractType: "Nomeação Definitiva",
+      contractLink: "Quadro de Nomeação",
+      admissionDate: new Date().toISOString().split('T')[0],
+      assignedClasses: newDocente.classes.filter(Boolean).map(cId => ({
+        classId: cId,
+        className: classes.find(cl => cl.id === cId)?.name || cId
+      }))
+    };
+
+    addEmployee(employeeData);
+    setIsAddingDocente(false);
+    setNewDocente({
+      nome: "",
+      email: "",
+      telefone: "",
+      ciclo: "",
+      disciplinas: [""],
+      classes: [""],
+    });
+  };
 
   // Build complete official pauta roster
   const subjectIds = subjects.map((s) => s.id);
@@ -390,93 +455,39 @@ export function PedagogicalDashboard() {
     <CollapsibleSidebar
       sidebarContent={
         <SidebarMenu
-          activeTab={activeTab === "chat" ? "messages" : activeTab}
+          activeTab={activeTab === "chat" ? "chat" : activeTab === "pautas" && pautaSubView === "pauta_exames" ? "exames" : activeTab}
           setActiveTab={(tab) => {
-            if (tab === "messages") setActiveTab("chat");
-            else setActiveTab(tab as any);
+            if (tab === "messages" || tab === "chat") {
+              setActiveTab("chat");
+            } else if (tab === "exames") {
+              setActiveTab("pautas");
+              setPautaSubView("pauta_exames");
+            } else if (tab === "pautas") {
+              setActiveTab("pautas");
+              setPautaSubView("frequencia");
+            } else {
+              setActiveTab(tab as any);
+            }
           }}
-          additionalContent={
-            <div className="space-y-6">
-              <div className="space-y-1">
-                <div className="px-4 mb-2">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestão Acadêmica</h3>
-                </div>
-                <button
-                  onClick={() => {
-                    setActiveTab("pautas");
-                    setPautaSubView("frequencia");
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === "pautas" && pautaSubView === "frequencia"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <FileSpreadsheet className="h-4 w-4 text-slate-400" /> Pautas de Frequência
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("pautas");
-                    setPautaSubView("pauta_exames");
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === "pautas" && pautaSubView === "pauta_exames"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <Award className="h-4 w-4 text-slate-400" /> Cadernetas e Exames
-                </button>
-                <button
-                  onClick={() => setActiveTab("disciplinas")}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === "disciplinas"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <BookOpen className="h-4 w-4 text-slate-400" /> Disciplinas
-                </button>
-                <button
-                  onClick={() => setActiveTab("docentes")}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === "docentes"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <Users className="h-4 w-4 text-slate-400" /> Docentes
-                </button>
-                <button
-                  onClick={() => setActiveTab("corpo_discente")}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === "corpo_discente"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <GraduationCap className="h-4 w-4 text-slate-400" /> Turmas e Alunos
-                </button>
-                <button
-                  onClick={() => setActiveTab("statistics")}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === "statistics"
-                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <Layers className="h-4 w-4 text-indigo-600" /> Estatística dos Ciclos (1º, 2º e 3º)
-                </button>
-              </div>
-            </div>
-          }
         />
       }
     >
       <div className="overflow-y-auto p-6 md:p-8 custom-scrollbar">
+        {activeTab === "gestao_aulas" && (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <LessonPlannerManager initialMode="gestao_aulas" overrideRole="pedagogical" />
+          </div>
+        )}
+
+        {activeTab === "livro_turma" && (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <DigitalClassBookManager overrideRole="pedagogical" />
+          </div>
+        )}
+
         {activeTab === "statistics" && (
           <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
-            <UnifiedRoleStatisticsView overrideRole="gestao" />
+            <NationalHierarchyStatisticsWorkflow initialLevel="ciclo" />
           </div>
         )}
 
@@ -584,7 +595,7 @@ export function PedagogicalDashboard() {
                   }`}
                 >
                   <Award className="h-3.5 w-3.5" />
-                  Pauta Geral de Exames
+                  Pauta de Exame
                 </button>
                 <button
                   id="tab-admitidos-exames"
@@ -1187,12 +1198,9 @@ export function PedagogicalDashboard() {
                                   </span>
                                 </div>
                               ) : (
-                                <div className="flex flex-col items-center justify-center p-2 rounded-md bg-white border border-gray-100 shadow-sm">
-                                  <span className="font-bold text-blue-800">
-                                    Matemática
-                                  </span>
-                                  <span className="text-xs text-gray-500 mt-1">
-                                    Prof. João Professor
+                                <div className="flex flex-col items-center justify-center p-2 rounded-md bg-white border border-gray-100 shadow-sm min-h-[60px]">
+                                  <span className="text-xs text-gray-400 italic">
+                                    Horário Livre
                                   </span>
                                 </div>
                               )}
@@ -1220,32 +1228,33 @@ export function PedagogicalDashboard() {
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-6">
-                <div className="col-span-1">
+                <div className="col-span-2">
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Ciclo
+                    Ciclo / Classe Base
                   </label>
                   <select className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white">
-                    <option>2º Ciclo ESG</option>
+                    <option value="">Selecione o Ciclo...</option>
+                    {availableCiclos.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-2">
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Turma
+                    Turma (Opcional)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Turma A"
-                    className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                  />
+                  <select className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white">
+                    <option value="">Todas as Turmas</option>
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Sala Nº
                   </label>
-                  <select className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white">
-                    <option>Sala 01</option>
-                    <option>Sala 02</option>
-                  </select>
+                  <input
+                    type="text"
+                    placeholder="Ex: Sala 01"
+                    className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  />
                 </div>
               </div>
 
@@ -1266,7 +1275,7 @@ export function PedagogicalDashboard() {
                   </label>
                   <input
                     type="text"
-                    placeholder="MAT-10"
+                    placeholder="Ex: MAT-10"
                     className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
                   />
                 </div>
@@ -1275,9 +1284,9 @@ export function PedagogicalDashboard() {
                     Carga Semanal
                   </label>
                   <select className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white">
+                    <option>2h</option>
                     <option>4h</option>
                     <option>6h</option>
-                    <option>8h</option>
                   </select>
                 </div>
                 <div className="col-span-12 md:col-span-2">
@@ -1285,7 +1294,8 @@ export function PedagogicalDashboard() {
                     Docente Atribuído
                   </label>
                   <select className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white">
-                    <option>João Professor</option>
+                    <option value="">Selecione o Docente...</option>
+                    {employees.filter(e => e.career === 'Docente').map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                 </div>
                 <div className="col-span-12 md:col-span-3">
@@ -1393,10 +1403,10 @@ export function PedagogicalDashboard() {
                   <h4 className="font-semibold text-gray-700 border-b pb-2 mt-8">
                     Alocação Pedagógica
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-6">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Ciclo *
+                        Ciclo Base *
                       </label>
                       <select
                         className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
@@ -1408,7 +1418,7 @@ export function PedagogicalDashboard() {
                           })
                         }
                       >
-                        <option value="">Selecione o Ciclo</option>
+                        <option value="">Selecione o Ciclo Principal</option>
                         {Array.from(
                           new Set(classes.map((c) => c.gradeLevel)),
                         ).map((g) => (
@@ -1418,51 +1428,59 @@ export function PedagogicalDashboard() {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Disciplina *
-                      </label>
-                      <select
-                        className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                        value={newDocente.disciplina}
-                        onChange={(e) =>
-                          setNewDocente({
-                            ...newDocente,
-                            disciplina: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Selecione a Disciplina</option>
-                        {subjects.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-bold text-gray-700">Disciplinas *</label>
+                          <button onClick={addLocalSubjectField} className="text-[10px] text-blue-600 font-bold hover:underline">+ Adicionar</button>
+                        </div>
+                        {newDocente.disciplinas.map((sub, idx) => (
+                          <select
+                            key={idx}
+                            className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                            value={sub}
+                            onChange={(e) => {
+                              const updated = [...newDocente.disciplinas];
+                              updated[idx] = e.target.value;
+                              setNewDocente({ ...newDocente, disciplinas: updated });
+                            }}
+                          >
+                            <option value="">Selecione a Disciplina</option>
+                            {subjects.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
                         ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Classe / Nível *
-                      </label>
-                      <select
-                        className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                        value={newDocente.classe}
-                        onChange={(e) =>
-                          setNewDocente({
-                            ...newDocente,
-                            classe: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Selecione a Classe</option>
-                        {Array.from(
-                          new Set(classes.map((c) => c.gradeLevel)),
-                        ).map((g) => (
-                          <option key={g} value={g}>
-                            {g}
-                          </option>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-bold text-gray-700">Classes / Turmas *</label>
+                          <button onClick={addLocalClassField} className="text-[10px] text-blue-600 font-bold hover:underline">+ Adicionar</button>
+                        </div>
+                        {newDocente.classes.map((cls, idx) => (
+                          <select
+                            key={idx}
+                            className="block w-full rounded-md border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                            value={cls}
+                            onChange={(e) => {
+                              const updated = [...newDocente.classes];
+                              updated[idx] = e.target.value;
+                              setNewDocente({ ...newDocente, classes: updated });
+                            }}
+                          >
+                            <option value="">Selecione a Classe</option>
+                            {classes.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} ({c.gradeLevel})
+                              </option>
+                            ))}
+                          </select>
                         ))}
-                      </select>
+                      </div>
                     </div>
                   </div>
 
@@ -1476,7 +1494,7 @@ export function PedagogicalDashboard() {
                     </Button>
                     <Button
                       className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6"
-                      onClick={() => setIsAddingDocente(false)}
+                      onClick={handleSaveDocente}
                     >
                       Salvar Docente
                     </Button>
@@ -1498,7 +1516,7 @@ export function PedagogicalDashboard() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 text-sm">
                       {(employees || [])
-                        .filter((e) => e.career === "Docente")
+                        .filter((e) => e.career === "Docente" && e.schoolId === currentUser?.schoolId)
                         .map((doc) => {
                           const hasDiretor = doc.isDiretorTurma;
                           const hasDelegadoDisc = doc.isDelegadoDisciplina;
@@ -1837,12 +1855,6 @@ export function PedagogicalDashboard() {
             <ErrorBoundary fallbackTitle="Erro ao Carregar Relatório de Atividades">
               <CollaboratorReportDispatcher />
             </ErrorBoundary>
-          </div>
-        )}
-
-        {activeTab === "signature" && (
-          <div className="max-w-5xl mx-auto pb-12">
-            <SignatureManager />
           </div>
         )}
 

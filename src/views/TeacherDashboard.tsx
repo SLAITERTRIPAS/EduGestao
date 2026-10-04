@@ -26,6 +26,11 @@ import {
   Sliders,
   Sparkles,
   Layers,
+  Save,
+  Database,
+  CheckCircle2,
+  RefreshCw,
+  Zap,
 } from "lucide-react";
 import { TeacherAssignment, LessonSummary } from "../types";
 import { CollapsibleSidebar } from "../components/CollapsibleSidebar";
@@ -39,6 +44,8 @@ import { NationalHierarchyStatisticsWorkflow } from "../components/NationalHiera
 import { UserWorkSummary } from "../components/UserWorkSummary";
 import { UnifiedRoleStatisticsView } from "../components/UnifiedRoleStatisticsView";
 import { HeaderInstitucional } from "../components/HeaderInstitucional";
+import { DigitalClassBookManager } from "../components/DigitalClassBookManager";
+import { LessonPlannerManager } from "../components/LessonPlannerManager";
 import {
   PautaControlPanel,
   PautaColumnVisibility,
@@ -55,11 +62,13 @@ import {
 } from "../components/PautaPrintConfigModal";
 import { getInstitutionalCode } from "../utils/institutionCode";
 import { ensureStudentCodeBeforeName } from "../utils/studentCodeValidator";
+import { getActiveTrimester, isTrimesterActiveForTeacher } from "../utils/schoolCalendarStore";
 
 const MOZAMBIQUE_LOGO_URL =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Emblem_of_Mozambique.svg/600px-Emblem_of_Mozambique.svg.png";
 
 export function TeacherDashboard() {
+  const activeTrimester = getActiveTrimester();
   const {
     currentUser,
     assignments,
@@ -137,9 +146,9 @@ export function TeacherDashboard() {
     } catch (e) {}
   };
 
-  // Navigation mode: Caderneta vs. Exame vs. Sumários vs. Atividades
+  // Navigation mode: Caderneta vs. Exame vs. Sumários vs. Livro Único de Turma vs. Atividades vs. Estatística
   const [activeMode, setActiveMode] = useState<
-    "caderneta" | "exame" | "sumarios" | "atividades"
+    "caderneta" | "exame" | "sumarios" | "livro_turma" | "atividades" | "estatistica"
   >("caderneta");
 
   // Atividades state
@@ -195,7 +204,7 @@ export function TeacherDashboard() {
   const [isAddingSummary, setIsAddingSummary] = useState(false);
 
   // Caderneta state
-  const [selectedTrimester, setSelectedTrimester] = useState<1 | 2 | 3>(1);
+  const [selectedTrimester, setSelectedTrimester] = useState<1 | 2 | 3>(() => activeTrimester);
   const [draftGrades, setDraftGrades] = useState<
     Record<
       string,
@@ -222,6 +231,41 @@ export function TeacherDashboard() {
   const [expandedGrades, setExpandedGrades] = useState<Record<string, boolean>>(
     {},
   );
+
+  // Auto-sync draft grades from store whenever selected assignment or trimester changes
+  useEffect(() => {
+    if (!selectedAssignment) return;
+    const initialDrafts: Record<
+      string,
+      {
+        acs1?: number;
+        acs2?: number;
+        acs3?: number;
+        trabalho1?: number;
+        trabalho2?: number;
+        apt?: number;
+      }
+    > = {};
+
+    (grades || []).forEach((g) => {
+      if (
+        g.classId === selectedAssignment.classId &&
+        g.subjectId === selectedAssignment.subjectId &&
+        g.trimester === selectedTrimester
+      ) {
+        initialDrafts[g.studentId] = {
+          acs1: g.acs1,
+          acs2: g.acs2,
+          acs3: g.acs3,
+          trabalho1: g.trabalho1,
+          trabalho2: g.trabalho2,
+          apt: g.apt,
+        };
+      }
+    });
+
+    setDraftGrades(initialDrafts);
+  }, [selectedAssignment, selectedTrimester, grades]);
 
   // Show feedback banner helper
   const showFeedback = (
@@ -258,6 +302,110 @@ export function TeacherDashboard() {
       }
       return next;
     });
+  };
+
+  // Salvar Todas as Notas da Turma no Firestore e na Pauta Geral
+  const handleSaveAllGrades = () => {
+    if (!selectedAssignment || !currentUser) {
+      showFeedback("Selecione uma turma e disciplina primeiro.", "error");
+      return;
+    }
+
+    if (selectedTrimester !== activeTrimester) {
+      showFeedback(`Restrição Regimental do Docente: O lançamento e alteração de notas é permitido exclusivamente no Trimestre em Andamento (${activeTrimester}º Trimestre). O ${selectedTrimester}º Trimestre está bloqueado para edições.`, "error");
+      return;
+    }
+
+    const classStudents = (students || []).filter(
+      (s) => s.classId === selectedAssignment.classId,
+    );
+
+    let savedCount = 0;
+    classStudents.forEach((student) => {
+      const dGrades = draftGrades[student.id];
+      if (!dGrades) return;
+
+      const acsArr = [dGrades.acs1, dGrades.acs2, dGrades.acs3].filter(
+        (v): v is number => v !== undefined && !isNaN(v),
+      );
+      const mediaAcs =
+        acsArr.length > 0
+          ? acsArr.reduce((a, b) => a + b, 0) / acsArr.length
+          : undefined;
+
+      const trabArr = [dGrades.trabalho1, dGrades.trabalho2].filter(
+        (v): v is number => v !== undefined && !isNaN(v),
+      );
+      const mediaTrabalho =
+        trabArr.length > 0
+          ? trabArr.reduce((a, b) => a + b, 0) / trabArr.length
+          : undefined;
+
+      let mediaFinal: number | undefined = undefined;
+      if (mediaAcs !== undefined && dGrades.apt !== undefined) {
+        if (mediaTrabalho !== undefined) {
+          mediaFinal = (mediaAcs + mediaTrabalho + dGrades.apt) / 3;
+        } else {
+          mediaFinal = (mediaAcs + dGrades.apt) / 2;
+        }
+      }
+
+      if (acsArr.length > 0 || dGrades.apt !== undefined || trabArr.length > 0) {
+        addGrade({
+          studentId: student.id,
+          classId: selectedAssignment.classId,
+          subjectId: selectedAssignment.subjectId,
+          teacherId: currentUser.id,
+          trimester: selectedTrimester,
+          acs1: dGrades.acs1,
+          acs2: dGrades.acs2,
+          acs3: dGrades.acs3,
+          mediaAcs,
+          trabalho1: dGrades.trabalho1,
+          trabalho2: dGrades.trabalho2,
+          mediaTrabalho,
+          apt: dGrades.apt,
+          media: mediaFinal,
+        });
+        savedCount++;
+      }
+    });
+
+    if (savedCount > 0) {
+      showFeedback(
+        `Caderneta salva com sucesso! ${savedCount} notas de alunos gravadas na base de dados Firestore e sincronizadas com a Pauta Geral.`,
+        "success",
+      );
+    } else {
+      showFeedback("Insira as notas dos estudantes antes de salvar.", "error");
+    }
+  };
+
+  // Preencher Exemplo de Notas para Teste
+  const handleAutoFillDemoGrades = () => {
+    if (!selectedAssignment) return;
+    const classStudents = (students || []).filter(
+      (s) => s.classId === selectedAssignment.classId,
+    );
+
+    const newDrafts = { ...draftGrades };
+    classStudents.forEach((st, idx) => {
+      const baseScore = 11 + ((idx * 3) % 8);
+      newDrafts[st.id] = {
+        acs1: Math.min(20, Math.max(8, baseScore - 1)),
+        acs2: Math.min(20, Math.max(9, baseScore)),
+        acs3: Math.min(20, Math.max(10, baseScore + 1)),
+        trabalho1: Math.min(20, Math.max(10, baseScore + 2)),
+        trabalho2: Math.min(20, Math.max(9, baseScore)),
+        apt: Math.min(20, Math.max(7, baseScore - 1)),
+      };
+    });
+
+    setDraftGrades(newDrafts);
+    showFeedback(
+      "Valores sugeridos preenchidos na caderneta. Clique em 'Salvar Todas as Notas' para persistir.",
+      "success",
+    );
   };
 
   const handleLaunchGrade = (studentId: string) => {
@@ -419,7 +567,7 @@ export function TeacherDashboard() {
         resultado: "Dispensado",
       });
       showFeedback(
-        "Status 'Dispensado' confirmado e sincronizado com a Pauta Geral de Exames!",
+        "Status 'Dispensado' confirmado e sincronizado com a Pauta de Exame!",
       );
       return;
     }
@@ -443,7 +591,7 @@ export function TeacherDashboard() {
     });
 
     showFeedback(
-      "Nota de exame lançada com sucesso! Copiada diretamente para a Pauta Geral de Exames.",
+      "Nota de exame lançada com sucesso! Copiada diretamente para a Pauta de Exame.",
     );
   };
 
@@ -1018,6 +1166,17 @@ export function TeacherDashboard() {
                 Sumários
               </button>
               <button
+                onClick={() => setActiveMode("livro_turma")}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+                  activeMode === "livro_turma"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <Layers className="h-4 w-4" />
+                Livro Único da Turma (Docentes)
+              </button>
+              <button
                 onClick={() => setActiveMode("atividades")}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all ${
                   activeMode === "atividades"
@@ -1039,6 +1198,17 @@ export function TeacherDashboard() {
               >
                 <FileSpreadsheet className="h-4 w-4" />
                 Exames
+              </button>
+              <button
+                onClick={() => setActiveMode("estatistica")}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+                  activeMode === "estatistica"
+                    ? "bg-purple-700 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <BarChart2 className="h-4 w-4" />
+                Estatística & DAP
               </button>
             </div>
           </div>
@@ -1088,79 +1258,180 @@ export function TeacherDashboard() {
               />
             </div>
 
-              {/* Grid do Cabeçalho com Nome do Docente e da Cadeira */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4 text-xs mb-6">
-                <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
-                  <span className="block text-gray-500 font-semibold text-[10px] uppercase tracking-wider">
-                    DOCENTE / PROFESSOR
-                  </span>
-                  <span className="font-extrabold text-gray-900 text-sm block truncate">
-                    {currentUser?.name || "Não especificado"}
-                  </span>
+              {/* Grid do Cabeçalho com Seletor Rápido de Turma, Disciplina e Trimestre */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase tracking-wider mb-1">
+                      TURMA & DISCIPLINA ATRIBUÍDA
+                    </label>
+                    <select
+                      className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={selectedAssignment?.id || ""}
+                      onChange={(e) => {
+                        const a = myAssignments.find((item) => item.id === e.target.value);
+                        if (a) setSelectedAssignment(a);
+                      }}
+                    >
+                      {myAssignments.map((a) => {
+                        const t = classes.find((c) => c.id === a.classId);
+                        const s = subjects.find((sub) => sub.id === a.subjectId);
+                        return (
+                          <option key={a.id} value={a.id}>
+                            {t?.name || "Turma"} ({t?.gradeLevel}) - {s?.name}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase tracking-wider mb-1">
+                      TRIMESTRE LECTIVO
+                    </label>
+                    <select
+                      className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-blue-900 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={selectedTrimester}
+                      onChange={(e) =>
+                        setSelectedTrimester(Number(e.target.value) as 1 | 2 | 3)
+                      }
+                    >
+                      <option value={1}>1º Trimestre {activeTrimester === 1 ? '• Em Andamento' : '(Apenas Leitura)'}</option>
+                      <option value={2}>2º Trimestre {activeTrimester === 2 ? '• Em Andamento' : '(Apenas Leitura)'}</option>
+                      <option value={3}>3º Trimestre {activeTrimester === 3 ? '• Em Andamento' : '(Apenas Leitura)'}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase tracking-wider mb-1">
+                      PROFESSOR / DOCENTE
+                    </label>
+                    <div className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs truncate">
+                      {currentUser?.name || "Docente"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase tracking-wider mb-1">
+                      ANO & PERÍODO
+                    </label>
+                    <div className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs truncate">
+                      {new Date().getFullYear()} • {turma?.period || "Diurno"}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
-                  <span className="block text-gray-500 font-semibold text-[10px] uppercase tracking-wider">
-                    CADEIRA / DISCIPLINA
-                  </span>
-                  <span className="font-extrabold text-blue-800 text-sm block truncate">
-                    {subject?.name || "Não especificada"}
-                  </span>
-                </div>
+                {/* Resumo Estatístico em Tempo Real da Caderneta */}
+                {(() => {
+                  const classStudents = myStudents;
+                  const total = classStudents.length;
+                  let launched = 0;
+                  let sumMedias = 0;
+                  let positives = 0;
 
-                <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
-                  <span className="block text-gray-500 font-semibold text-[10px] uppercase tracking-wider">
-                    TURMA E CLASSE
-                  </span>
-                  <span className="font-extrabold text-gray-900 text-sm block truncate">
-                    {turma?.gradeLevel || "10ª"} • {turma?.name || "Turma A"}
-                  </span>
-                </div>
+                  classStudents.forEach((st) => {
+                    const dg = draftGrades[st.id] || {};
+                    const eg = grades.find(
+                      (g) =>
+                        g.studentId === st.id &&
+                        g.subjectId === selectedAssignment.subjectId &&
+                        g.trimester === selectedTrimester,
+                    );
+                    const acs1 = eg?.isLocked ? eg.acs1 : dg.acs1;
+                    const acs2 = eg?.isLocked ? eg.acs2 : dg.acs2;
+                    const acs3 = eg?.isLocked ? eg.acs3 : dg.acs3;
+                    const apt = eg?.isLocked ? eg.apt : dg.apt;
+                    const trab1 = eg?.isLocked ? eg.trabalho1 : dg.trabalho1;
+                    const trab2 = eg?.isLocked ? eg.trabalho2 : dg.trabalho2;
 
-                <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
-                  <span className="block text-gray-500 font-semibold text-[10px] uppercase tracking-wider">
-                    ANO LECTIVO / PERÍODO
-                  </span>
-                  <span className="font-extrabold text-gray-900 text-sm block truncate">
-                    {new Date().getFullYear()} • {turma?.period || "Manhã"}
-                  </span>
+                    const acsArr = [acs1, acs2, acs3].filter((v): v is number => v !== undefined && !isNaN(v));
+                    const trabArr = [trab1, trab2].filter((v): v is number => v !== undefined && !isNaN(v));
+
+                    if (acsArr.length > 0 && apt !== undefined) {
+                      launched++;
+                      const macs = acsArr.reduce((a, b) => a + b, 0) / acsArr.length;
+                      let mFinal = 0;
+                      if (trabArr.length > 0) {
+                        const mTrab = trabArr.reduce((a, b) => a + b, 0) / trabArr.length;
+                        mFinal = (macs + mTrab + apt) / 3;
+                      } else {
+                        mFinal = (macs + apt) / 2;
+                      }
+                      sumMedias += mFinal;
+                      if (mFinal >= 9.5) positives++;
+                    } else if (eg?.media !== undefined) {
+                      launched++;
+                      sumMedias += eg.media;
+                      if (eg.media >= 9.5) positives++;
+                    }
+                  });
+
+                  const avg = launched > 0 ? Number((sumMedias / launched).toFixed(1)) : 0;
+                  const passPct = launched > 0 ? Math.round((positives / launched) * 100) : 0;
+
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-200">
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">Total Estudantes</span>
+                        <span className="text-base font-black text-slate-900">{total} Alunos</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">Notas Lançadas</span>
+                        <span className="text-base font-black text-blue-700">{launched} de {total} ({total ? Math.round((launched/total)*100) : 0}%)</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">Média da Turma</span>
+                        <span className={`text-base font-black ${avg >= 9.5 ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {launched > 0 ? `${avg} val.` : 'Aguardando'}
+                        </span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">Taxa de Positivas</span>
+                        <span className={`text-base font-black ${passPct >= 50 ? 'text-emerald-700' : 'text-amber-600'}`}>
+                          {launched > 0 ? `${passPct}%` : 'Aguardando'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Barra de Ações Rápidas da Caderneta */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveAllGrades}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                    >
+                      <Save size={15} />
+                      <span>Salvar Todas as Notas no Firestore</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleAutoFillDemoGrades}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      title="Preenche notas de demonstração para agilizar testes"
+                    >
+                      <Zap size={14} />
+                      <span>Preencher Exemplo de Notas</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => {
+                        setTeacherPrintType('frequencia');
+                        setIsTeacherPrintModalOpen(true);
+                      }}
+                      variant="outline"
+                      className="text-xs gap-1.5 h-9 border-blue-400 bg-blue-50/80 hover:bg-blue-100 text-blue-900 font-bold shadow-2xs cursor-pointer"
+                    >
+                      <Printer className="h-3.5 w-3.5 text-blue-700" /> Imprimir Caderneta A3
+                    </Button>
+                  </div>
                 </div>
               </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-center space-x-3">
-                <label className="font-semibold text-sm text-gray-700">
-                  Trimestre:
-                </label>
-                <select
-                  className="rounded-md border-gray-300 border px-3 py-1.5 text-sm font-medium focus:border-blue-500 focus:ring-blue-500 bg-white"
-                  value={selectedTrimester}
-                  onChange={(e) =>
-                    setSelectedTrimester(Number(e.target.value) as 1 | 2 | 3)
-                  }
-                >
-                  <option value={1}>1º Trimestre</option>
-                  <option value={2}>2º Trimestre</option>
-                  <option value={3}>3º Trimestre</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => {
-                    setTeacherPrintType('frequencia');
-                    setIsTeacherPrintModalOpen(true);
-                  }}
-                  variant="outline"
-                  className="text-xs gap-1.5 h-8 border-blue-400 bg-blue-50/80 hover:bg-blue-100 text-blue-900 font-bold shadow-2xs cursor-pointer"
-                >
-                  <Printer className="h-3.5 w-3.5 text-blue-700" /> Configurar & Imprimir A3
-                </Button>
-                <div className="text-xs text-gray-600 bg-amber-50/80 px-3 py-1.5 rounded-md border border-amber-200">
-                  <strong>Cálculo Média Final:</strong> Com Trabalhos = (Média ACS + Média de Trabalho + APT) / 3 • Sem Trabalhos = (Média ACS + APT) / 2
-                </div>
-              </div>
-            </div>
 
             {/* PAINEL DE CONTROLE DE PAUTAS DO PROFESSOR */}
             <PautaControlPanel
@@ -1640,9 +1911,26 @@ export function TeacherDashboard() {
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
-              <strong>Atenção:</strong> Uma vez lançada, a nota é bloqueada e
-              copiada automaticamente para a Pauta Geral da turma.
+            <div className="mt-4 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <p className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
+                  PERSISTÊNCIA FIRESTORE & SINCRONIZAÇÃO DE PAUTAS
+                </p>
+                <p className="text-xs text-slate-300">
+                  Todas as notas inseridas são sincronizadas em tempo real com a Pauta Oficial e a Caderneta da Escola.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveAllGrades}
+                  className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Save size={16} className="text-slate-950" />
+                  <span>Salvar Todas as Notas da Turma</span>
+                </button>
+              </div>
             </div>
           </Card>
         )}
@@ -2163,13 +2451,24 @@ export function TeacherDashboard() {
                   <div>
                     <strong className="font-bold">Integração Direta:</strong> Ao
                     clicar em "Lançar Nota", o resultado é copiado diretamente
-                    para a <strong>Pauta Geral de Exames</strong> da escola,
+                    para a <strong>Pauta de Exame</strong> da escola,
                     ficando imediatamente disponível para visualização e
                     impressão pela Direção Pedagógica.
                   </div>
                 </div>
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* MODE 3.5: LIVRO ÚNICO DA TURMA (COMPARTILHADO POR TODOS OS PROFESSORES) */}
+        {activeMode === "livro_turma" && (
+          <div className="space-y-6">
+            <DigitalClassBookManager 
+              initialClassId={selectedAssignment.classId} 
+              initialSubjectId={selectedAssignment.subjectId} 
+              overrideRole="teacher" 
+            />
           </div>
         )}
 
@@ -2509,6 +2808,13 @@ export function TeacherDashboard() {
             </Card>
           </div>
         )}
+
+        {/* MODE 5: ESTATÍSTICA DA TURMA & SUBMISSÃO AO DAP DO CICLO */}
+        {activeMode === "estatistica" && (
+          <div className="space-y-6">
+            <NationalHierarchyStatisticsWorkflow initialLevel="turma" />
+          </div>
+        )}
       </div>
     );
   };
@@ -2521,6 +2827,12 @@ export function TeacherDashboard() {
           setActiveTab={(tab) => {
             if (tab === "messages") {
               setActiveTab("chat");
+            } else if (tab === "caderneta") {
+              if (!selectedAssignment && myAssignments.length > 0) {
+                setSelectedAssignment(myAssignments[0]);
+              }
+              setActiveMode("caderneta");
+              setActiveTab("caderneta");
             } else {
               if (tab === "overview") {
                 setSelectedAssignment(null);
@@ -2596,14 +2908,38 @@ export function TeacherDashboard() {
       }
     >
       <div className="p-6 md:p-8 bg-slate-50 h-full overflow-y-auto">
-        {activeTab === "overview" ? (
+        {activeTab === "plano_aula" ? (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <LessonPlannerManager initialMode="plano_aula" overrideRole="teacher" />
+          </div>
+        ) : activeTab === "gestao_aulas" ? (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <LessonPlannerManager initialMode="gestao_aulas" overrideRole="teacher" />
+          </div>
+        ) : activeTab === "livro_turma" ? (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <DigitalClassBookManager
+              overrideRole="teacher"
+              initialClassId={selectedAssignment?.classId}
+              initialSubjectId={selectedAssignment?.subjectId}
+            />
+          </div>
+        ) : activeTab === "overview" || activeTab === "caderneta" ? (
           renderMainContent()
         ) : activeTab === "calendar" ? (
           <AcademicCalendarComponent />
-        ) : activeTab === "signature" ? (
-          <SignatureManager />
         ) : activeTab === "messages" || activeTab === "chat" ? (
           <OfficialMessages />
+        ) : activeTab === "reports" ? (
+          <div className="max-w-6xl mx-auto space-y-6">
+            <ErrorBoundary fallbackTitle="Erro ao Carregar Relatório de Docente">
+              <CollaboratorReportDispatcher />
+            </ErrorBoundary>
+          </div>
+        ) : activeTab === "statistics" ? (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <NationalHierarchyStatisticsWorkflow initialLevel="turma" />
+          </div>
         ) : (
           <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex flex-col items-center justify-center text-center py-32 bg-white rounded-3xl border border-slate-200 shadow-sm">

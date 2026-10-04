@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import { 
-  Printer, Download, ArrowLeft, Save, CheckCircle2, Plus, Trash2, Sparkles, RefreshCw, Loader2
+  Printer, Download, ArrowLeft, Save, CheckCircle2, Plus, Trash2, Sparkles, RefreshCw, Loader2, ShieldCheck
 } from 'lucide-react';
 import { SignatureBox } from './SignatureBox';
 import { exportReportToPDF } from '../utils/pdfExportHelper';
@@ -22,9 +22,9 @@ export function TeacherReport() {
   const { currentUser, schools, classes, subjects, students, assignments } = useStore();
   const schoolList = Array.isArray(schools) ? schools : [];
   const school = schoolList.find(s => s.id === currentUser?.schoolId) || schoolList[0] || {
-    name: 'Escola Secundária Josina Machel',
-    province: 'Maputo Cidade',
-    district: 'KaMpfumo'
+    name: 'Instituição de Ensino',
+    province: '---',
+    district: '---'
   };
 
   // Auto-calculated defaults
@@ -46,7 +46,7 @@ export function TeacherReport() {
     docente: currentUser?.name || 'Docente',
     turmas: defaultClass,
     dataElaboracao: new Date().toISOString().split('T')[0],
-    instituicao: school?.name || 'Escola Secundária Josina Machel',
+    instituicao: school?.name || 'Instituição de Ensino',
     departamento: 'Direcção Pedagógica • Área de Ensino Geral',
 
     // Section 1: Introdução
@@ -321,10 +321,21 @@ export function TeacherReport() {
         <HeaderInstitucional
           school={school}
           academicYear={formData.anoLectivo || 2026}
-          documentTitle="RELATÓRIO TRIMESTRAL DE ACTIVIDADES DOS DOCENTES DO ENSINO GERAL"
+          documentTitle={`RELATÓRIO TRIMESTRAL DE ACTIVIDADES - ${currentUser?.name?.toUpperCase()}`}
           badge={`Ensino Secundário Geral • ${formData.trimestre}`}
           emblemSize="md"
         />
+
+        {/* 0. ENQUADRAMENTO INSTITUCIONAL */}
+        <section className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <h2 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+            <ShieldCheck size={14} className="text-blue-700" />
+            Enquadramento Institucional & Legal
+          </h2>
+          <p className="text-[11px] text-slate-700 leading-relaxed text-justify font-medium italic">
+            O presente relatório de actividades técnico-pedagógicas é elaborado em estrito cumprimento das directrizes emanadas pelo Ministério da Educação e Desenvolvimento Humano (MINEDH), ao abrigo do Regulamento Geral das Escolas do Ensino Secundário. Visa a monitorização sistemática do processo de ensino-aprendizagem, assegurando a transparência na avaliação discente e o cumprimento integral dos planos curriculares oficiais.
+          </p>
+        </section>
 
         {/* METADATA BAR */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-[11px] font-medium">

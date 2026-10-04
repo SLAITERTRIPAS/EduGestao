@@ -475,22 +475,30 @@ export const OfficialPauta: React.FC<OfficialPautaProps> = ({ type, selectedTurm
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Zoom Controls */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+          {/* Zoom Controls & Fit Screen */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200 gap-1">
             <button 
-              onClick={() => setZoom(Math.max(60, zoom - 10))} 
-              className="p-1 text-gray-700 hover:text-gray-950 hover:bg-gray-200 rounded"
+              onClick={() => setZoom(Math.max(50, zoom - 10))} 
+              className="p-1 text-gray-700 hover:text-gray-950 hover:bg-gray-200 rounded cursor-pointer"
               title="Diminuir Zoom"
             >
               <ZoomOut className="w-4 h-4" />
             </button>
-            <span className="text-xs font-bold text-gray-800 px-2 min-w-[45px] text-center">{zoom}%</span>
+            <span className="text-xs font-bold text-gray-800 px-1 min-w-[42px] text-center">{zoom}%</span>
             <button 
-              onClick={() => setZoom(Math.min(130, zoom + 10))} 
-              className="p-1 text-gray-700 hover:text-gray-950 hover:bg-gray-200 rounded"
+              onClick={() => setZoom(Math.min(140, zoom + 10))} 
+              className="p-1 text-gray-700 hover:text-gray-950 hover:bg-gray-200 rounded cursor-pointer"
               title="Aumentar Zoom"
             >
               <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom(75)}
+              className="px-2 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-900 font-extrabold text-[11px] rounded transition-all cursor-pointer border border-blue-300"
+              title="Ajustar a área da pauta ao ecrã do sistema"
+            >
+              Ajustar ao Ecrã
             </button>
           </div>
 
@@ -693,6 +701,16 @@ export const OfficialPauta: React.FC<OfficialPautaProps> = ({ type, selectedTurm
         {/* ------------------------------------------------------------- */}
         {/* DOCUMENT HEADER: PAUTA DE EXAME */}
         {/* ------------------------------------------------------------- */}
+        {type === 'exame' && !hasExams && (
+          <div className="bg-amber-50 border-2 border-amber-400 text-amber-900 p-6 rounded-2xl my-8 text-center shadow-md">
+            <h4 className="font-extrabold text-base mb-1 uppercase">Aviso Regulamentar (MINEDH)</h4>
+            <p className="text-xs font-semibold leading-relaxed">
+              Para classes sem exame (como a <strong className="font-bold">{gradeLevelStr || '7ª Classe'}</strong>), a avaliação escolar termina na <strong className="underline">Pauta de Frequência</strong>.<br/>
+              A <strong>Pauta de Exame</strong> aplica-se exclusivamente a turmas e classes com exames finais (organizando apenas os alunos admitidos a exame).
+            </p>
+          </div>
+        )}
+
         {type === 'exame' && (
           <div className="text-center font-sans mb-3 pb-2 border-b-2 border-black relative">
             <div className="absolute top-2 right-2">

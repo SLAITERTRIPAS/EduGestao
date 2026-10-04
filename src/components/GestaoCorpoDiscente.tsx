@@ -108,7 +108,7 @@ export function GestaoCorpoDiscente() {
       contractType: modalForm.contractType,
       leadershipRole: modalForm.leadershipRole,
       taughtSubjects: subjectsArr
-    };
+    } as any as Employee;
 
     addEmployee(newEmp);
     setModalCareer(null);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, Class, Subject, Grade } from '../types';
+import { Student, Class, Subject, Grade, MOZAMBIQUE_EMBLEM_URL } from '../types';
 import { useStore } from '../store';
 import { Button } from './ui';
 import { Printer, ShieldCheck, X, FileText, CheckSquare, Square, Palette, Fingerprint, ZoomIn, ZoomOut, Eye } from 'lucide-react';
@@ -353,7 +353,7 @@ export function DeclarationDocument({
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setSelectedCycle(key)}
+                    onClick={() => setSelectedCycle(key as 'cycle1' | 'cycle2' | 'cycle3' | 'cycle4')}
                     className={`px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? `${c.bannerBg} text-white shadow-sm ring-1 ${c.activeRingClass}`

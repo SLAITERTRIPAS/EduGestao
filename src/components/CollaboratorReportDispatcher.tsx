@@ -61,7 +61,7 @@ export const CollaboratorReportDispatcher: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-widest">Portal de Relatórios Oficiais • Colaboradores MINEDH</span>
           </div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Relatório de Atividades do Colaborador
+            Relatório de Atividades: {currentUser?.name}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Modelo otimizado e adequado ao seu perfil: <strong className="text-slate-800">{collaboratorTitle}</strong> ({currentUser?.name}).

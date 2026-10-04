@@ -33,7 +33,9 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Wallet
 }
  from 'lucide-react';
 import { School, SchoolLevelType, SchoolManagementType }
@@ -76,6 +78,46 @@ export function SchoolManagement() {
   
   const [validationError, setValidationError] = useState<ValidationResult | null>(null);
 
+  // Form State
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [managementType, setManagementType] = useState<SchoolManagementType>('estatal');
+  const [province, setProvince] = useState('Maputo Cidade');
+  const [district, setDistrict] = useState('');
+  const [locality, setLocality] = useState('');
+  const [administrativePost, setAdministrativePost] = useState('');
+  const [address, setAddress] = useState('');
+  
+  // Corpo Directivo (Com Perfis de Acesso & Credenciais Individuais)
+  const [directorName, setDirectorName] = useState('');
+  const [directorNip, setDirectorNip] = useState('');
+  const [directorPhone, setDirectorPhone] = useState('');
+  const [directorEmail, setDirectorEmail] = useState('');
+  const [directorPassword, setDirectorPassword] = useState('');
+
+  const [dapName, setDapName] = useState('');
+  const [dapNip, setDapNip] = useState('');
+  const [dapPhone, setDapPhone] = useState('');
+  const [dapEmail, setDapEmail] = useState('');
+  const [dapPassword, setDapPassword] = useState('');
+
+  const [secretariatChiefName, setSecretariatChiefName] = useState('');
+  const [secretariatNip, setSecretariatNip] = useState('');
+  const [secretariatPhone, setSecretariatPhone] = useState('');
+  const [secretariatEmail, setSecretariatEmail] = useState('');
+  const [secretariatPassword, setSecretariatPassword] = useState('');
+
+  const [financialChiefName, setFinancialChiefName] = useState('');
+  const [financialNip, setFinancialNip] = useState('');
+  const [financialPhone, setFinancialPhone] = useState('');
+  const [financialEmail, setFinancialEmail] = useState('');
+  const [financialPassword, setFinancialPassword] = useState('');
+
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [studentCapacity, setStudentCapacity] = useState<number>(1000);
+
   const handleCopyLink = (schoolId: string) => {
     const url = getSchoolTenantUrl(schoolId);
     navigator.clipboard.writeText(url);
@@ -96,7 +138,7 @@ export function SchoolManagement() {
       setTimeout(() => setEmblemProgress(null), 1200);
     } catch {
       setEmblemProgress(null);
-      alert('Erro ao processar fundo branco do emblema.');
+      console.warn('Erro ao processar fundo branco do emblema.');
     }
   };
 
@@ -111,7 +153,7 @@ export function SchoolManagement() {
       setTimeout(() => setEmblemProgress(null), 1200);
     } catch {
       setEmblemProgress(null);
-      alert('Erro ao processar fundo branco do emblema.');
+      console.warn('Erro ao processar fundo branco do emblema.');
     }
   };
 
@@ -135,29 +177,9 @@ export function SchoolManagement() {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (e) {
       console.error(e);
-      alert('Erro ao atualizar escola.');
     }
   };
 
-  // Form State
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [logoUrl, setLogoUrl] = useState(SCHOOL_PRESET_LOGOS[0]);
-  const [managementType, setManagementType] = useState<SchoolManagementType>('estatal');
-  const [province, setProvince] = useState('Maputo Cidade');
-  const [district, setDistrict] = useState('');
-  const [locality, setLocality] = useState('');
-  const [administrativePost, setAdministrativePost] = useState('');
-  const [address, setAddress] = useState('');
-  
-  // Corpo Directivo
-  const [directorName, setDirectorName] = useState('');
-  const [dapName, setDapName] = useState('');
-  const [secretariatChiefName, setSecretariatChiefName] = useState('');
-
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [studentCapacity, setStudentCapacity] = useState<number>(1000);
   const [selectedTypes, setSelectedTypes] = useState<SchoolLevelType[]>(['ENSINO SECUNDÁRIO DO 1 CICLO']);
   const [shifts, setShifts] = useState<string[]>(['Diurno']);
 
@@ -200,7 +222,7 @@ export function SchoolManagement() {
     addSchool({
       name: name.trim(),
       code: code.trim() || `ESC-${Math.floor(100 + Math.random() * 900)}`,
-      logoUrl: logoUrl.trim() || SCHOOL_PRESET_LOGOS[0],
+      logoUrl: logoUrl.trim(),
       managementType,
       province,
       district: district.trim() || 'Sede',
@@ -209,8 +231,25 @@ export function SchoolManagement() {
       address: address.trim() || 'Localidade Sede',
       schoolTypes: selectedTypes,
       directorName: directorName.trim(),
+      directorNip: directorNip.trim(),
+      directorEmail: directorEmail.trim(),
+      directorPassword: directorPassword.trim(),
+      directorPhone: directorPhone.trim(),
       dapName: dapName.trim(),
+      dapNip: dapNip.trim(),
+      dapEmail: dapEmail.trim(),
+      dapPassword: dapPassword.trim(),
+      dapPhone: dapPhone.trim(),
       secretariatChiefName: secretariatChiefName.trim(),
+      secretariatNip: secretariatNip.trim(),
+      secretariatEmail: secretariatEmail.trim(),
+      secretariatPassword: secretariatPassword.trim(),
+      secretariatPhone: secretariatPhone.trim(),
+      financialChiefName: financialChiefName.trim(),
+      financialNip: financialNip.trim(),
+      financialEmail: financialEmail.trim(),
+      financialPassword: financialPassword.trim(),
+      financialPhone: financialPhone.trim(),
       phone: phone.trim(),
       email: email.trim(),
       shifts,
@@ -219,19 +258,36 @@ export function SchoolManagement() {
       autoAssignedSubjects: autoCurriculum.subjects
     });
 
-    setSuccessMessage(`Escola "${name}" e o seu Corpo Directivo registados com sucesso! As contas de usuário e currículo foram atribuídos automaticamente.`);
+    setSuccessMessage(`Escola "${name}" e as contas individuais do Corpo Directivo (Diretor, DAP, Secretaria e Finanças) foram registadas com sucesso!`);
     
     // Reset Form
     setName('');
     setCode('');
-    setLogoUrl(SCHOOL_PRESET_LOGOS[0]);
+    setLogoUrl('');
     setDistrict('');
     setLocality('');
     setAdministrativePost('');
     setAddress('');
     setDirectorName('');
+    setDirectorNip('');
+    setDirectorPhone('');
+    setDirectorEmail('');
+    setDirectorPassword('');
     setDapName('');
+    setDapNip('');
+    setDapPhone('');
+    setDapEmail('');
+    setDapPassword('');
     setSecretariatChiefName('');
+    setSecretariatNip('');
+    setSecretariatPhone('');
+    setSecretariatEmail('');
+    setSecretariatPassword('');
+    setFinancialChiefName('');
+    setFinancialNip('');
+    setFinancialPhone('');
+    setFinancialEmail('');
+    setFinancialPassword('');
     setPhone('');
     setEmail('');
     setSelectedTypes(['ENSINO SECUNDÁRIO DO 1 CICLO']);
@@ -436,17 +492,21 @@ export function SchoolManagement() {
                   </label>
                   
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <img 
-                      src={logoUrl}
- 
-                      alt="Logotipo" 
-                      className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-500 shadow-sm shrink-0 bg-white"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = SCHOOL_PRESET_LOGOS[0];
-                      }
-}
-
-                    />
+                    {logoUrl ? (
+                      <img 
+                        src={logoUrl}
+                        alt="Logotipo" 
+                        className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-500 shadow-sm shrink-0 bg-white"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-100 flex flex-col items-center justify-center text-slate-400 shrink-0">
+                        <Building2 size={20} />
+                        <span className="text-[9px] font-bold">Sem Logo</span>
+                      </div>
+                    )}
                     <div className="flex-1 w-full space-y-2">
                       <input
                         type="url"
@@ -717,129 +777,384 @@ export function SchoolManagement() {
               </div>
             </div>
 
-            {/* SEÇÃO 4: CORPO DIRECTIVO (ALOCAÇÃO AUTOMÁTICA DE CONTAS) */}
+            {/* SEÇÃO 4: CORPO DIRECTIVO (CRIAÇÃO DE CONTAS & CREDENCIAIS POR PERFIL) */}
 
             <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider text-blue-900 border-l-4 border-blue-600 pl-2.5 flex items-center gap-2">
-                <UserCheck size={15}
- /> 4. Registo do Corpo Directivo (Criação de Contas & Alocação)
-              </h4>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-l-4 border-blue-600 pl-2.5">
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                    <UserCheck size={16} className="text-blue-600" /> 4. Registo do Corpo Directivo (Criação de Contas & Credenciais)
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Cada perfil tem os seus campos específicos de registo e credenciais individuais de acesso. Ao registar, o utilizador é alocado diretamente à sua área de gestão.
+                  </p>
+                </div>
+              </div>
 
-              <p className="text-xs text-slate-500 italic">
-                Após o registo do Corpo Directivo, ao aceder ao sistema pelas suas contas, o sistema deteta o usuário e a sua alocação, sendo direcionado diretamente à sua área de trabalho para a gestão da escola e registo de colaboradores.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 
-                {/* Director da Escola */}
+                {/* CARD 1: DIRETORES DA ESCOLA / DIRETOR GERAL */}
+                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
+                  <div className="flex items-center justify-between border-b border-blue-200/60 pb-2">
+                    <span className="font-extrabold text-xs uppercase tracking-wider text-blue-950 flex items-center gap-1.5">
+                      <Building2 size={14} className="text-blue-700" /> 1. Director da Escola (Geral)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-200 text-blue-900 font-bold text-[10px]">
+                      Perfil: Direção Escolar
+                    </span>
+                  </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Director da Escola: <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nome do Director da Escola"
-                    value={directorName}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-0.5">
+                        Nome Completo do Director: <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nome Completo do Director"
+                        value={directorName}
+                        onChange={e => setDirectorName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
 
-                    onChange={e => setDirectorName(e.target.value)}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        NIP / NUIT / BI:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="NIP ou BI do Director"
+                        value={directorNip}
+                        onChange={e => setDirectorNip(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
 
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                  <span className="text-[10px] text-blue-700 font-semibold mt-1 block">Cria conta com perfil "Direcção"</span>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        Telefone Direto:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="+258 84 000 0000"
+                        value={directorPhone}
+                        onChange={e => setDirectorPhone(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-blue-900 uppercase mb-0.5">
+                        Credencial: E-mail de Acesso
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="diretor@escola.com"
+                        value={directorEmail}
+                        onChange={e => setDirectorEmail(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-blue-300 rounded-xl font-mono text-xs font-bold text-blue-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-blue-900 uppercase mb-0.5">
+                        Credencial: Senha Inicial
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Senha de acesso"
+                        value={directorPassword}
+                        onChange={e => setDirectorPassword(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-blue-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* DAP - Director Adjunto Pedagógico */}
+                {/* CARD 2: DIRECTOR ADJUNTO PEDAGÓGICO (DAP) */}
+                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-3">
+                  <div className="flex items-center justify-between border-b border-indigo-200/60 pb-2">
+                    <span className="font-extrabold text-xs uppercase tracking-wider text-indigo-950 flex items-center gap-1.5">
+                      <BookOpen size={14} className="text-indigo-700" /> 2. Director Adjunto Pedagógico (DAP)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-900 font-bold text-[10px]">
+                      Perfil: Pedagógico
+                    </span>
+                  </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Director Adjunto Pedagógico (DAP): <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nome do DAP / Dir. Pedagógico"
-                    value={dapName}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-0.5">
+                        Nome Completo do DAP: <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nome do Director Pedagógico"
+                        value={dapName}
+                        onChange={e => setDapName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
 
-                    onChange={e => setDapName(e.target.value)}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        NIP / NUIT / BI:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="NIP ou BI do DAP"
+                        value={dapNip}
+                        onChange={e => setDapNip(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
 
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                  <span className="text-[10px] text-blue-700 font-semibold mt-1 block">Cria conta com perfil "Pedagógico"</span>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        Telefone Direto:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="+258 84 000 0000"
+                        value={dapPhone}
+                        onChange={e => setDapPhone(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-indigo-900 uppercase mb-0.5">
+                        Credencial: E-mail de Acesso
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="pedagogico@escola.com"
+                        value={dapEmail}
+                        onChange={e => setDapEmail(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-indigo-300 rounded-xl font-mono text-xs font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-indigo-900 uppercase mb-0.5">
+                        Credencial: Senha Inicial
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Senha de acesso"
+                        value={dapPassword}
+                        onChange={e => setDapPassword(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-indigo-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Chefe da Secretaria */}
+                {/* CARD 3: CHEFE DA SECRETARIA */}
+                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
+                  <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                    <span className="font-extrabold text-xs uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                      <FileText size={14} className="text-amber-800" /> 3. Chefe da Secretaria Geral
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold text-[10px]">
+                      Perfil: Secretaria
+                    </span>
+                  </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Chefe da Secretaria: <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nome do Chefe da Secretaria"
-                    value={secretariatChiefName}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-0.5">
+                        Nome Completo do Chefe de Secretaria: <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nome do Chefe da Secretaria"
+                        value={secretariatChiefName}
+                        onChange={e => setSecretariatChiefName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
 
-                    onChange={e => setSecretariatChiefName(e.target.value)}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        NIP / NUIT / BI:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="NIP ou BI"
+                        value={secretariatNip}
+                        onChange={e => setSecretariatNip(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
 
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                  <span className="text-[10px] text-blue-700 font-semibold mt-1 block">Cria conta com perfil "Secretaria"</span>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        Telefone Direto:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="+258 84 000 0000"
+                        value={secretariatPhone}
+                        onChange={e => setSecretariatPhone(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-900 uppercase mb-0.5">
+                        Credencial: E-mail de Acesso
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="secretaria@escola.com"
+                        value={secretariatEmail}
+                        onChange={e => setSecretariatEmail(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-900 uppercase mb-0.5">
+                        Credencial: Senha Inicial
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Senha de acesso"
+                        value={secretariatPassword}
+                        onChange={e => setSecretariatPassword(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Telefone */}
+                {/* CARD 4: GESTOR FINANCEIRO / TESOUREIRO */}
+                <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
+                  <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+                    <span className="font-extrabold text-xs uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                      <Wallet size={14} className="text-emerald-800" /> 4. Gestor Financeiro & Tesouraria
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 font-bold text-[10px]">
+                      Perfil: Finanças
+                    </span>
+                  </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-0.5">
+                        Nome Completo do Gestor Financeiro:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Nome do Responsável Financeiro"
+                        value={financialChiefName}
+                        onChange={e => setFinancialChiefName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        NIP / NUIT / BI:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="NIP ou BI"
+                        value={financialNip}
+                        onChange={e => setFinancialNip(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                        Telefone Direto:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="+258 84 000 0000"
+                        value={financialPhone}
+                        onChange={e => setFinancialPhone(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-900 uppercase mb-0.5">
+                        Credencial: E-mail de Acesso
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="financas@escola.com"
+                        value={financialEmail}
+                        onChange={e => setFinancialEmail(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-xl font-mono text-xs font-bold text-emerald-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-900 uppercase mb-0.5">
+                        Credencial: Senha Inicial
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Senha de acesso"
+                        value={financialPassword}
+                        onChange={e => setFinancialPassword(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Informação Geral da Instituição */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Telefone Institucional:
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                    Telefone Geral Institucional:
                   </label>
                   <input
                     type="text"
                     placeholder="+258 84 000 0000"
                     value={phone}
-
                     onChange={e => setPhone(e.target.value)}
-
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
-                {/* E-mail */}
-
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    E-mail Oficial da Escola:
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
+                    E-mail Oficial Institucional:
                   </label>
                   <input
                     type="email"
                     placeholder="escola@minedh.gov.mz"
                     value={email}
-
                     onChange={e => setEmail(e.target.value)}
-
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
-                {/* Capacidade */}
-
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">
                     Capacidade Prevista de Alunos:
                   </label>
                   <input
                     type="number"
                     value={studentCapacity}
-
                     onChange={e => setStudentCapacity(Number(e.target.value))}
-
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
                 {/* Turnos */}
-
                 <div className="sm:col-span-3">
                   <label className="block font-bold text-slate-700 mb-1">
                     Turnos em Funcionamento:
@@ -847,20 +1162,17 @@ export function SchoolManagement() {
                   <div className="flex items-center gap-4 pt-1">
                     {['Diurno', 'Nocturno', 'Integral'].map(s => (
                       <label key={s}
- className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                        className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer"
+                      >
                         <input
                           type="checkbox"
                           checked={shifts.includes(s)}
-
                           onChange={() => toggleShift(s)}
-
                           className="rounded text-blue-600 focus:ring-blue-500"
                         />
-                        <span>{s}
-</span>
+                        <span>{s}</span>
                       </label>
                     ))}
-
                   </div>
                 </div>
 

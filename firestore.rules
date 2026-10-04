@@ -1,122 +1,86 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Global Helpers
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Default Deny Catch-all
+    // Default Deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Connection test doc
-    match /test/connection {
-      allow read, write: if true;
-    }
+    // Hardened Helpers
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() { return isVerified() && (request.auth.token.email == 'slaitertripas@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
 
-    // Users Collection
+    // Collection: Users
     match /users/{userId} {
-      allow read, write: if isValidId(userId);
+      function isValidUser(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.name is string && data.name.size() <= 200 &&
+               data.email is string && data.email.size() <= 200 &&
+               data.role is string;
+      }
+      allow get: if isSignedIn();
+      allow list: if isAdmin() || (isSignedIn() && resource.data.schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow create: if isSignedIn() && isValidUser(incoming()) && (isAdmin() || request.auth.uid == userId);
+      allow update: if isSignedIn() && isValidUser(incoming()) && (
+        isAdmin() || 
+        (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'trainingArea', 'subject', 'password']))
+      );
+      allow delete: if isAdmin();
     }
 
-    // Schools Collection
-    match /schools/{schoolId} {
-      allow read, write: if isValidId(schoolId);
-    }
-
-    // Students Collection
-    match /students/{studentId} {
-      allow read, write: if isValidId(studentId);
-    }
-
-    // Employees Collection
+    // Collection: Employees
     match /employees/{employeeId} {
-      allow read, write: if isValidId(employeeId);
+      function isValidEmployee(data) {
+        return data.id is string && data.schoolId is string &&
+               data.name is string && data.name.size() <= 200 &&
+               data.career is string;
+      }
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidEmployee(incoming()) && (isAdmin() || incoming().schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow update: if isSignedIn() && isValidEmployee(incoming()) && (isAdmin() || existing().schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow delete: if isAdmin();
     }
 
-    // Evaluations Collection
-    match /evaluations/{evaluationId} {
-      allow read, write: if isValidId(evaluationId);
-    }
-
-    // Class Tasks Collection
-    match /classTasks/{taskId} {
-      allow read, write: if isValidId(taskId);
-    }
-
-    // Task Submissions Collection
-    match /taskSubmissions/{submissionId} {
-      allow read, write: if isValidId(submissionId);
-    }
-
-    // Petitions Collection
-    match /petitions/{petitionId} {
-      allow read, write: if isValidId(petitionId);
-    }
-
-    // School Documents Collection
-    match /schoolDocuments/{docId} {
-      allow read, write: if isValidId(docId);
-    }
-
-    // Notifications Collection
-    match /notifications/{notificationId} {
-      allow read, write: if isValidId(notificationId);
-    }
-
-    // User Notifications Collection
-    match /userNotifications/{userNotificationId} {
-      allow read, write: if isValidId(userNotificationId);
-    }
-
-    // Chat Messages Collection
-    match /chatMessages/{messageId} {
-      allow read, write: if isValidId(messageId);
-    }
-
-    // Grades Collection
-    match /grades/{gradeId} {
-      allow read, write: if isValidId(gradeId);
-    }
-
-    // Exam Grades Collection
-    match /examGrades/{examGradeId} {
-      allow read, write: if isValidId(examGradeId);
-    }
-
-    // Classes Collection
+    // Collection: Classes
     match /classes/{classId} {
-      allow read, write: if isValidId(classId);
+      function isValidClass(data) {
+        return data.id is string && data.schoolId is string &&
+               data.name is string && data.gradeLevel is string;
+      }
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidClass(incoming()) && (isAdmin() || incoming().schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow update: if isSignedIn() && isValidClass(incoming()) && (isAdmin() || existing().schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow delete: if isAdmin();
     }
 
-    // Subjects Collection
-    match /subjects/{subjectId} {
-      allow read, write: if isValidId(subjectId);
+    // Collection: Students
+    match /students/{studentId} {
+      function isValidStudent(data) {
+        return data.id is string && data.schoolId is string &&
+               data.name is string && data.name.size() <= 200;
+      }
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidStudent(incoming()) && (isAdmin() || incoming().schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow update: if isSignedIn() && isValidStudent(incoming()) && (isAdmin() || existing().schoolId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId);
+      allow delete: if isAdmin();
     }
-
-    // Backups Collection (Pedagogical and Administrative Backups)
-    match /backups/{backupId} {
-      allow read, write: if isValidId(backupId);
-    }
+    
+    // Supporting Collections (Auto-synced in store)
+    match /evaluations/{id} { allow read, write: if isSignedIn(); }
+    match /classTasks/{id} { allow read, write: if isSignedIn(); }
+    match /schools/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /schoolDocuments/{id} { allow read, write: if isSignedIn(); }
+    match /notifications/{id} { allow read, write: if isSignedIn(); }
+    match /subjects/{id} { allow read, write: if isSignedIn(); }
+    match /grades/{id} { allow read, write: if isSignedIn(); }
+    match /examGrades/{id} { allow read, write: if isSignedIn(); }
+    match /collectionPeriods/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /collectionForms/{id} { allow read, write: if isSignedIn(); }
+    match /chatMessages/{id} { allow read, write: if isSignedIn(); }
+    match /backups/{id} { allow read, write: if isAdmin(); }
   }
 }

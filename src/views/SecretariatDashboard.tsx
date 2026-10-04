@@ -24,6 +24,9 @@ import {
   Receipt,
 } from "lucide-react";
 import { Student } from "../types";
+import { isExamGradeLevel, buildOfficialPautaRoster } from "../utils/pautaCalculations";
+import { getStoredSchoolCalendarConfig } from "../utils/schoolCalendarStore";
+import { Award, Sparkles, Sliders, Calculator, CheckCircle2 } from "lucide-react";
 import { EmployeeManagement } from "../components/EmployeeManagement";
 import { StudentProcessDocument } from "../components/StudentProcessDocument";
 import { CertificateDocument } from "../components/CertificateDocument";
@@ -38,9 +41,9 @@ import { AcademicCalendarComponent } from "../components/AcademicCalendarCompone
 import { AutoRenewalManagement } from "../components/AutoRenewalManagement";
 import { InstitutionalAxesManager } from "../components/InstitutionalAxesManager";
 import { UnifiedRoleStatisticsView } from "../components/UnifiedRoleStatisticsView";
+import { DigitalClassBookManager } from "../components/DigitalClassBookManager";
 import {
   Search,
-  Award,
   CheckCircle,
   AlertCircle,
   LayoutDashboard,
@@ -68,6 +71,8 @@ import {
   extractDistrictCode, 
   normalizeDocumentNumber 
 } from "../utils/iueGenerator";
+import { computeAutoCurriculum, ALL_SCHOOL_LEVELS_MAPPING } from "../data/sigeRoles";
+import { AlertTriangle } from "lucide-react";
 
 export function SecretariatDashboard() {
   const {
@@ -80,13 +85,32 @@ export function SecretariatDashboard() {
     collectionPeriods = [],
     currentUser,
     activeSchool,
+    schools = [],
+    examGrades = [],
+    addExamGrade,
+    reorganizeClasses,
   } = useStore();
+
+  const isGradeExamInCalendar = (gradeLevel?: string | null): boolean => {
+    if (!gradeLevel) return false;
+    const config = getStoredSchoolCalendarConfig();
+    const cleanGrade = gradeLevel.toLowerCase().trim();
+    return config.nationalExams.some(exam =>
+      exam.gradeLevels.some(gl => {
+        const cleanGl = gl.toLowerCase().trim();
+        return cleanGrade.includes(cleanGl) || cleanGl.includes(cleanGrade);
+      })
+    );
+  };
+
   const [activeTab, setActiveTab] = useState<
     | "overview"
+    | "livro_turma"
     | "enrollment"
     | "auto_renewal"
     | "certificates"
     | "declarations"
+    | "pautas_exames"
     | "employees"
     | "collection"
     | "messages"
@@ -108,13 +132,22 @@ export function SecretariatDashboard() {
   }, []);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  
+  // Pautas de Exames & Formação de Turmas States
+  const [pautasExamesTab, setPautasExamesTab] = useState<'pautas' | 'turmas'>('pautas');
+  const [selectedExamClassId, setSelectedExamClassId] = useState<string>('');
+  const [selectedGradeForReorg, setSelectedGradeForReorg] = useState<string>('10ª Classe');
+  const [maxStudentsPerClass, setMaxStudentsPerClass] = useState<number>(6);
+  const [examGradesInput, setExamGradesInput] = useState<Record<string, string>>({});
+  const [reorgSuccessMsg, setReorgSuccessMsg] = useState<string | null>(null);
+  
   const [selectedReceiptStudent, setSelectedReceiptStudent] = useState<Student | null>(null);
   const [selectedMedicalStudent, setSelectedMedicalStudent] = useState<Student | null>(null);
   const [selectedListClassId, setSelectedListClassId] = useState<string | null>(
     null,
   );
   const [enrollmentSubView, setEnrollmentSubView] = useState<'hub' | 'form'>('hub');
-  const [selectedCycleFilter, setSelectedCycleFilter] = useState<'all' | '1' | '2'>('all');
+  const [selectedCycleFilter, setSelectedCycleFilter] = useState<string>('all');
 
   // Filters for Certificates & Declarations
   const [certYear, setCertYear] = useState<number>(2026);
@@ -183,20 +216,7 @@ export function SecretariatDashboard() {
     },
 
     // 4. Histórico Académico
-    academicHistory: [
-      {
-        year: 2024,
-        grade: "8ª Classe",
-        school: "Escola Comunitária São Pedro",
-        result: "Aprovado",
-      },
-      {
-        year: 2025,
-        grade: "9ª Classe",
-        school: "Escola Secundária Josina Machel",
-        result: "Aprovado",
-      },
-    ],
+    academicHistory: [],
 
     // 5. Matrícula
     enrollmentDate: new Date().toISOString().split("T")[0],
@@ -207,6 +227,36 @@ export function SecretariatDashboard() {
     // 10. Observações Gerais
     generalObservations: "",
   });
+
+  const currentSchool = activeSchool || (schools || []).find(s => s.id === currentUser?.schoolId) || (schools || [])[0];
+  const schoolTypes = currentSchool?.schoolTypes || ['ENSINO SECUNDÁRIO DO 1 CICLO', 'ENSINO SECUNDÁRIO DO 2 CICLO'];
+  const autoCurriculum = useMemo(() => computeAutoCurriculum(schoolTypes), [schoolTypes]);
+
+  const availableLevels = useMemo(() => 
+    ALL_SCHOOL_LEVELS_MAPPING.filter(m => schoolTypes.includes(m.id)), 
+    [schoolTypes]
+  );
+
+  const isEntryGradeAllowed = useMemo(() => {
+    if (!newStudent.entryGrade) return true;
+    if (!autoCurriculum.classes || autoCurriculum.classes.length === 0) return true;
+    const normalizedEntry = newStudent.entryGrade.replace('ª', '.ª');
+    return autoCurriculum.classes.some(ac => ac === normalizedEntry || ac.includes(newStudent.entryGrade.split(' ')[0]));
+  }, [newStudent.entryGrade, autoCurriculum]);
+
+  // Ensure entryGrade is valid for the current school type
+  useEffect(() => {
+    if (autoCurriculum.classes.length > 0) {
+      const normalizedCurrent = newStudent.entryGrade.replace('ª', '.ª');
+      const isValid = autoCurriculum.classes.some(ac => ac === normalizedCurrent);
+      if (!isValid) {
+        setNewStudent(prev => ({ 
+          ...prev, 
+          entryGrade: autoCurriculum.classes[0].replace('.ª', 'ª') 
+        }));
+      }
+    }
+  }, [autoCurriculum, newStudent.entryGrade]);
 
   // Live IUE and NIM calculations for real-time visualization and enrollment
   const liveIUE = useMemo(() => generateIUE({
@@ -232,6 +282,11 @@ export function SecretariatDashboard() {
 
   const handleEnroll = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isEntryGradeAllowed) {
+      alert(`⚠️ Regra de Negócio Impeditiva: A classe "${newStudent.entryGrade}" não é leccionada por este tipo de estabelecimento de ensino (${schoolTypes.join(', ')}). A Secretaria está impedida de efetuar esta matrícula.`);
+      return;
+    }
     const calculatedIUE = generateIUE({
       name: newStudent.name,
       documentNumber: newStudent.idCardNumber || newStudent.nuit,
@@ -369,88 +424,6 @@ export function SecretariatDashboard() {
             setSelectedStudent(null);
             setActiveTab(tab as any);
           }}
-          additionalContent={
-            <div className="space-y-1">
-              <button
-                onClick={() => {
-                  setActiveTab("enrollment");
-                  setSelectedStudent(null);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "enrollment"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <UserPlus className="h-4 w-4" /> Matrículas
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("collection");
-                  setSelectedStudent(null);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "collection"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <FileSignature className="h-4 w-4" /> Recolha de Dados
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("employees");
-                  setSelectedStudent(null);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "employees"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <Users className="h-4 w-4" /> Gestão Colaboradores
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("certificates");
-                  setSelectedStudent(null);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "certificates"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <GraduationCap className="h-4 w-4" /> Certificados
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("declarations");
-                  setSelectedStudent(null);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "declarations"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <FileText className="h-4 w-4" /> Declarações Notas
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("auto_renewal");
-                  setSelectedStudent(null);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "auto_renewal"
-                    ? "bg-amber-50 text-amber-900 border border-amber-200 shadow-xs"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <RefreshCw className="h-4 w-4 text-amber-600" /> Renovação & Transição
-              </button>
-            </div>
-          }
         />
       }
     >
@@ -494,6 +467,12 @@ export function SecretariatDashboard() {
         {activeTab === "calendar" && (
           <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in">
             <AcademicCalendarComponent />
+          </div>
+        )}
+
+        {activeTab === "livro_turma" && (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <DigitalClassBookManager overrideRole="secretariat" />
           </div>
         )}
 
@@ -568,34 +547,31 @@ export function SecretariatDashboard() {
                       selectedCycleFilter === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    Todos os Ciclos ({classes.length})
+                    Todos os Ciclos ({classes.filter(c => c.schoolId === currentSchool?.id).length})
                   </button>
-                  <button
-                    onClick={() => setSelectedCycleFilter('1')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      selectedCycleFilter === '1' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    1º Ciclo (8ª e 9ª Classe)
-                  </button>
-                  <button
-                    onClick={() => setSelectedCycleFilter('2')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      selectedCycleFilter === '2' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    2º Ciclo (10ª, 11ª e 12ª Classe)
-                  </button>
+                  {availableLevels.map(level => (
+                    <button
+                      key={level.id}
+                      onClick={() => setSelectedCycleFilter(level.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        selectedCycleFilter === level.id ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {level.id.replace('ENSINO ', '').replace(' DO ', ' ')}
+                    </button>
+                  ))}
                 </div>
 
                 {/* Class List Cards (1-Click Selection) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {classes
+                    .filter((c) => c.schoolId === currentSchool?.id)
                     .filter((c) => {
-                      const isCycle1 = c.gradeLevel.includes('8') || c.gradeLevel.includes('9');
-                      if (selectedCycleFilter === '1') return isCycle1;
-                      if (selectedCycleFilter === '2') return !isCycle1;
-                      return true;
+                      if (selectedCycleFilter === 'all') return true;
+                      const levelDef = ALL_SCHOOL_LEVELS_MAPPING.find(l => l.id === selectedCycleFilter);
+                      if (!levelDef) return true;
+                      const normalizedGrade = c.gradeLevel.replace('ª', '.ª');
+                      return levelDef.classes.some(lc => lc === normalizedGrade || lc.includes(c.gradeLevel.split(' ')[0]));
                     })
                     .map((cls) => {
                       const classStudents = students.filter((s) => s.classId === cls.id);
@@ -814,7 +790,7 @@ export function SecretariatDashboard() {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">
-                          Classe de Ingresso
+                          Classe de Ingresso *
                         </label>
                         <select
                           value={newStudent.entryGrade}
@@ -824,22 +800,39 @@ export function SecretariatDashboard() {
                               entryGrade: e.target.value,
                             })
                           }
-                          className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 text-sm outline-none focus:border-blue-600"
+                          className={`w-full bg-white border rounded px-3 py-1.5 text-sm outline-none font-bold ${
+                            !isEntryGradeAllowed 
+                              ? 'border-red-500 text-red-900 bg-red-50' 
+                              : 'border-gray-300 text-slate-800 focus:border-blue-600'
+                          }`}
                         >
-                          <option value="1ª Classe">1ª Classe (1º Ciclo Primário)</option>
-                          <option value="2ª Classe">2ª Classe (1º Ciclo Primário)</option>
-                          <option value="3ª Classe">3ª Classe (1º Ciclo Primário - Exame)</option>
-                          <option value="4ª Classe">4ª Classe (2º Ciclo Primário)</option>
-                          <option value="5ª Classe">5ª Classe (2º Ciclo Primário)</option>
-                          <option value="6ª Classe">6ª Classe (2º Ciclo Primário - Exame)</option>
-                          <option value="7ª Classe">7ª Classe (1º Ciclo Secundário)</option>
-                          <option value="8ª Classe">8ª Classe (1º Ciclo Secundário)</option>
-                          <option value="9ª Classe">9ª Classe (1º Ciclo Secundário - Exame)</option>
-                          <option value="10ª Classe">10ª Classe (2º Ciclo Secundário)</option>
-                          <option value="11ª Classe">11ª Classe (2º Ciclo Secundário)</option>
-                          <option value="12ª Classe">12ª Classe (2º Ciclo Secundário - Exame)</option>
+                          <option value="">Selecione a Classe...</option>
+                          {autoCurriculum.classes.map(grade => {
+                            const normalizedGrade = grade.replace('.ª', 'ª');
+                            const levelInfo = ALL_SCHOOL_LEVELS_MAPPING.find(l => l.classes.includes(grade));
+                            const isExam = isExamGradeLevel(normalizedGrade);
+                            return (
+                              <option key={grade} value={normalizedGrade}>
+                                {normalizedGrade} ({levelInfo?.id.replace('ENSINO ', '').replace(' DO ', ' ')}{isExam ? ' - Exame' : ''})
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
+
+                      {!isEntryGradeAllowed && (
+                        <div className="col-span-1 md:col-span-4 p-4 bg-red-50 border-2 border-red-500 rounded-2xl text-red-900 flex items-start gap-3 my-2 shadow-sm animate-fadeIn">
+                          <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="font-black text-xs uppercase tracking-wide">
+                              ALERTA DA SECRETARIA: INCOMPATIBILIDADE COM TIPO DE ESCOLA
+                            </h4>
+                            <p className="text-xs font-semibold mt-1">
+                              A classe seleccionada (<strong>{newStudent.entryGrade}</strong>) não é leccionada nesta instituição (Tipo: <strong>{schoolTypes.join(', ')}</strong>). O sistema impede a realização da matrícula nesta classe.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">
                           Curso
@@ -2622,6 +2615,379 @@ export function SecretariatDashboard() {
             </div>
           );
         })()}
+        {activeTab === "pautas_exames" && (
+          <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 font-serif flex items-center gap-2">
+                    <Award className="text-blue-600" size={24} />
+                    Gestão Integrada de Exames e Distribuição de Turmas
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Geração de pautas de exame, digitação de notas e distribuição inteligente de turmas por idade e mérito regimental.
+                  </p>
+                </div>
+
+                {/* Sub-tab Selectors */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    onClick={() => setPautasExamesTab('pautas')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pautasExamesTab === 'pautas' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Calculator size={14} className="inline mr-1" />
+                    Pautas de Exame
+                  </button>
+                  <button
+                    onClick={() => setPautasExamesTab('turmas')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pautasExamesTab === 'turmas' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sliders size={14} className="inline mr-1" />
+                    Formação de Turmas
+                  </button>
+                </div>
+              </div>
+
+              {pautasExamesTab === 'pautas' ? (
+                <div className="space-y-6">
+                  {/* Pauta Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Selecione a Turma de Exame:</label>
+                      <select
+                        value={selectedExamClassId}
+                        onChange={e => setSelectedExamClassId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione uma turma de exame</option>
+                        {classes
+                          .filter(c => isGradeExamInCalendar(c.gradeLevel) && c.schoolId === activeSchool?.id)
+                          .map(c => (
+                            <option key={c.id} value={c.id}>{c.gradeLevel} - {c.name} ({c.period || 'Diurno'})</option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Disciplina do Exame:</label>
+                      <select
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {subjects.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-end">
+                      <Button
+                        onClick={() => {
+                          let count = 0;
+                          Object.entries(examGradesInput).forEach(([stId, value]) => {
+                            if (value !== '') {
+                              const val = parseFloat(value);
+                              if (!isNaN(val) && val >= 0 && val <= 20) {
+                                count++;
+                                const rosters = buildOfficialPautaRoster(students, classes, grades, subjects.map(sb => sb.id)).roster;
+                                const rRecord = rosters.find(r => r.student.id === stId);
+                                const mediaFrequencia = rRecord?.mfOverall || 10;
+                                const classificacaoFinal = Math.round(0.6 * mediaFrequencia + 0.4 * val);
+                                addExamGrade({
+                                  studentId: stId,
+                                  classId: selectedExamClassId,
+                                  subjectId: subjects[0]?.id || 'sub1',
+                                  teacherId: 'prof-1',
+                                  mediaFrequencia,
+                                  notaExame: val,
+                                  classificacaoFinal,
+                                  resultado: classificacaoFinal >= 9.5 ? 'Aprovado' : 'Reprovado'
+                                });
+                              }
+                            }
+                          });
+                          alert(`${count} notas de exame salvas e processadas na pauta com sucesso!`);
+                        }}
+                        disabled={!selectedExamClassId}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-md cursor-pointer"
+                      >
+                        Gravar Notas de Exame digitadas
+                      </Button>
+                    </div>
+                  </div>
+
+                  {selectedExamClassId ? (() => {
+                    const selectedClassObj = classes.find(c => c.id === selectedExamClassId);
+                    const { roster } = buildOfficialPautaRoster(students, classes, grades, subjects.map(s => s.id));
+                    
+                    const admittedStudents = roster.filter(
+                      r => r.classObj?.id === selectedExamClassId && r.finalStatus === 'ADMITIDO'
+                    );
+
+                    if (admittedStudents.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-xs text-slate-500 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                          Nenhum estudante foi admitido ao exame nesta turma ou todas as frequências ainda estão pendentes.
+                          <p className="mt-1 text-[11px] text-amber-600">Lembre-se: os alunos devem obter uma média de frequência maior ou igual a 9.5 para serem admitidos.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-600">
+                            Exibindo <span className="text-blue-900 font-extrabold">{admittedStudents.length}</span> alunos ADMITIDOS para o exame final de <span className="font-bold text-slate-800">{selectedClassObj?.gradeLevel}</span>:
+                          </p>
+                          <span className="text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-2.5 py-0.5">
+                            Regra de Exames MINEDH Aplicada
+                          </span>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-slate-900 text-white font-extrabold">
+                                <th className="p-3 text-center w-16">Nº Paut</th>
+                                <th className="p-3">Estudante (Ordem Alfabética)</th>
+                                <th className="p-3">Nº Processo</th>
+                                <th className="p-3 text-center">Média Freq. (60%)</th>
+                                <th className="p-3 text-center w-36">Nota de Exame (40%)</th>
+                                <th className="p-3 text-center">Classific. Final</th>
+                                <th className="p-3 text-center">Resultado</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium">
+                              {admittedStudents
+                                .sort((a, b) => a.student.name.localeCompare(b.student.name, 'pt-PT'))
+                                .map((st, idx) => {
+                                  const savedExam = examGrades.find(eg => eg.studentId === st.student.id && eg.classId === selectedExamClassId);
+                                  const tempValue = examGradesInput[st.student.id] ?? (savedExam ? String(savedExam.notaExame) : '');
+                                  const currentNE = parseFloat(tempValue);
+                                  const mediaFreq = st.mfOverall || 10;
+                                  const currentCF = !isNaN(currentNE) ? Math.round(0.6 * mediaFreq + 0.4 * currentNE) : (savedExam ? savedExam.classificacaoFinal : null);
+                                  const currentResult = currentCF !== null ? (currentCF >= 9.5 ? 'APROVADO' : 'REPROVADO') : (savedExam ? (savedExam.resultado === 'Aprovado' ? 'APROVADO' : 'REPROVADO') : '---');
+
+                                  return (
+                                    <tr key={st.student.id} className="hover:bg-slate-50/80 transition-colors">
+                                      <td className="p-3 text-center font-mono font-bold text-blue-900 bg-slate-50/50">{idx + 1}</td>
+                                      <td className="p-3">
+                                        <p className="font-extrabold text-slate-900">{st.student.name}</p>
+                                        <p className="text-[10px] text-slate-400 font-mono">{st.student.iue || 'Sem IUE'}</p>
+                                      </td>
+                                      <td className="p-3 font-mono text-slate-600">{st.student.processCode || '---'}</td>
+                                      <td className="p-3 text-center font-mono font-extrabold text-slate-800">{mediaFreq}</td>
+                                      <td className="p-3 text-center">
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={20}
+                                          step={0.5}
+                                          placeholder="Ex: 14.5"
+                                          value={tempValue}
+                                          onChange={e => setExamGradesInput({ ...examGradesInput, [st.student.id]: e.target.value })}
+                                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold text-center text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                      </td>
+                                      <td className="p-3 text-center font-mono font-black text-slate-950">
+                                        {currentCF !== null ? currentCF : '---'}
+                                      </td>
+                                      <td className="p-3 text-center">
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                          currentResult === 'APROVADO' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+                                          currentResult === 'REPROVADO' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-slate-100 text-slate-400'
+                                        }`}>
+                                          {currentResult}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div className="p-12 text-center text-xs text-slate-500 border border-slate-200 bg-slate-50 rounded-2xl">
+                      Por favor, selecione uma das turmas de exame autorizadas no calendário para visualizar os candidatos admitidos.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Reorganization Section */}
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
+                      <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <Sliders size={15} /> Parâmetros de Formação de Novas Turmas
+                      </h4>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 rounded px-2.5 py-0.5 font-black uppercase">Algoritmo de Idades e Mérito</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Nível de Ensino (Classe):</label>
+                        <select
+                          value={selectedGradeForReorg}
+                          onChange={e => setSelectedGradeForReorg(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {['3ª Classe', '6ª Classe', '8ª Classe', '9ª Classe', '10ª Classe', '11ª Classe', '12ª Classe']
+                            .map(grade => {
+                              const hasExam = isGradeExamInCalendar(grade);
+                              return (
+                                <option key={grade} value={grade}>
+                                  {grade} {hasExam ? '★ (Exame Definido no Calendário)' : '(Sem Exame)'}
+                                </option>
+                              );
+                            })
+                          }
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Máximo de Alunos por Turma:</label>
+                        <input
+                          type="number"
+                          min={2}
+                          max={50}
+                          value={maxStudentsPerClass}
+                          onChange={e => setMaxStudentsPerClass(parseInt(e.target.value, 10) || 6)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-[9px] text-slate-400 mt-1">Ex: 6 para testes rápidos, 30 ou 45 para turmas regulamentares.</p>
+                      </div>
+
+                      <div className="flex items-end">
+                        <Button
+                          onClick={() => {
+                            reorganizeClasses(activeSchool?.id || 's1', selectedGradeForReorg, maxStudentsPerClass);
+                            setReorgSuccessMsg(`Turmas da ${selectedGradeForReorg} formadas com sucesso baseando-se em idade (mais novos primeiro) e ordem alfabética.`);
+                            setTimeout(() => setReorgSuccessMsg(null), 6000);
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <RefreshCw size={14} /> Executar Ordenação e Formação
+                        </Button>
+                      </div>
+                    </div>
+
+                    {reorgSuccessMsg && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-[11px] font-bold flex items-center gap-2">
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                        <span>{reorgSuccessMsg}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Formed Classes Preview list */}
+                  <div className="space-y-4">
+                    <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
+                      <Users size={16} className="text-blue-600" />
+                      Visualização de Turmas Formadas na {selectedGradeForReorg}
+                    </h4>
+
+                    {(() => {
+                      const gradeClasses = classes.filter(
+                        c => c.gradeLevel === selectedGradeForReorg && c.schoolId === activeSchool?.id
+                      );
+
+                      if (gradeClasses.length === 0) {
+                        return (
+                          <div className="p-12 text-center text-xs text-slate-500 border border-slate-200 bg-slate-50 rounded-2xl">
+                            Nenhuma turma ativa ou formada para a {selectedGradeForReorg}. Clique no botão acima para formar as turmas automaticamente!
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {gradeClasses
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(cls => {
+                              const classStudents = students.filter(s => s.classId === cls.id);
+                              
+                              const birthYears = classStudents.map(s => {
+                                const y = parseInt(s.birthDate?.substring(0, 4) || '2010', 10);
+                                return isNaN(y) ? 2010 : y;
+                              });
+                              const avgBirthYear = birthYears.length > 0 ? Math.round(birthYears.reduce((a, b) => a + b, 0) / birthYears.length) : '---';
+
+                              return (
+                                <Card key={cls.id} className="p-5 border border-slate-200 rounded-2xl bg-white space-y-4 shadow-xs">
+                                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 bg-slate-50/50 -m-5 p-5 rounded-t-2xl">
+                                    <div>
+                                      <h5 className="font-black text-slate-900 text-sm">{cls.name}</h5>
+                                      <p className="text-[10px] text-slate-500">Média Ano de Nasc.: <strong className="font-mono text-blue-900">{avgBirthYear}</strong></p>
+                                      {classStudents.length > 0 && (() => {
+                                        const firstLetters = Array.from(new Set(classStudents.map(s => s.name.trim().charAt(0).toUpperCase())))
+                                          .sort((a, b) => a.localeCompare(b, 'pt-PT'));
+                                        const lettersRangeStr = firstLetters.length > 0 
+                                          ? (firstLetters.length === 1 ? firstLetters[0] : `${firstLetters[0]} - ${firstLetters[firstLetters.length - 1]}`)
+                                          : 'Vazio';
+                                        return (
+                                          <p className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100/40 rounded px-1.5 py-0.5 mt-1 inline-block">
+                                            Letras: <span className="font-mono font-black">{firstLetters.join(', ')} ({lettersRangeStr})</span>
+                                          </p>
+                                        );
+                                      })()}
+                                    </div>
+                                    <span className="bg-blue-100 text-blue-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                                      {classStudents.length} Alunos
+                                    </span>
+                                  </div>
+
+                                  <div className="divide-y divide-slate-100 text-xs">
+                                    {classStudents.length > 0 ? (
+                                      classStudents
+                                        .sort((a, b) => a.name.localeCompare(b.name, 'pt-PT'))
+                                        .map((st, sIdx) => {
+                                          const bYear = st.birthDate?.substring(0, 4) || '2010';
+                                          const isRep = st.entryType === 'repetente';
+                                          return (
+                                            <div key={st.id} className="py-2.5 flex items-center justify-between gap-3">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-mono text-slate-400 w-4">{sIdx + 1}</span>
+                                                <div>
+                                                  <p className="font-bold text-slate-900">{st.name}</p>
+                                                  <p className="text-[9px] text-slate-400 font-mono">Nasc.: {st.birthDate} ({bYear})</p>
+                                                </div>
+                                              </div>
+                                              
+                                              {isRep ? (
+                                                <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                  Repetente
+                                                </span>
+                                              ) : (
+                                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                  Mais Novo
+                                                </span>
+                                              )}
+                                            </div>
+                                          );
+                                        })
+                                    ) : (
+                                      <div className="p-4 text-center text-[10px] text-slate-400">
+                                        Nenhum aluno alocado a esta turma.
+                                      </div>
+                                    )}
+                                  </div>
+                                </Card>
+                              );
+                            })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {activeTab === "reports" && (
           <div className="w-full animate-in fade-in">
             <ErrorBoundary fallbackTitle="Erro ao Carregar Relatório da Secretaria">

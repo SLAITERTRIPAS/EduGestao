@@ -61,7 +61,7 @@ export const EnrollmentReceiptDocument: React.FC<EnrollmentReceiptDocumentProps>
   const currentClass = propSchoolClass || classes.find(c => c.id === student.classId) || {
     id: 'c1',
     schoolId: school?.id || 's1',
-    name: student.className || 'Turma 01',
+    name: (student as any).className || 'Turma 01',
     gradeLevel: student.entryGrade || '10ª Classe',
     year: student.academicYear || 2026,
     shift: 'Diurno',
@@ -70,7 +70,7 @@ export const EnrollmentReceiptDocument: React.FC<EnrollmentReceiptDocumentProps>
 
   const academicYear = propAcademicYear || student.academicYear || currentClass?.year || 2026;
   const gradeLevel = currentClass?.gradeLevel || student.entryGrade || '10ª Classe';
-  const className = currentClass?.name || student.className || 'Turma A';
+  const className = currentClass?.name || (student as any).className || 'Turma A';
   const shift = currentClass?.shift || 'Diurno / Manhã';
   const room = (currentClass as any)?.room || 'Sala 05';
 

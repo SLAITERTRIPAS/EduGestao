@@ -5,7 +5,9 @@ import { ShieldAlert, Search, Filter, History, User, Calendar, FileText, Downloa
 import { AuditLog } from '../types';
 
 export function AuditLogsManager() {
-  const { auditLogs, currentUser, students, patrimonyItems } = useStore();
+  const store = useStore();
+  const { currentUser, students, patrimonyItems } = store;
+  const auditLogs = (store as any).auditLogs || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAxis, setSelectedAxis] = useState<string>('todos');
   const [selectedAction, setSelectedAction] = useState<string>('todos');
@@ -17,12 +19,12 @@ export function AuditLogsManager() {
     // If no explicit audit logs, generate simulated audit trail from actual store changes for Eixo 4 & 7
     if (list.length === 0) {
       // Eixo 4 changes (students transferred or dropouts)
-      (students || []).filter(s => s.status === 'transferido' || s.status === 'desistente').forEach((st, idx) => {
+      (students || []).filter(s => (s as any).status === 'transferido' || s.enrollmentStatus === 'Transferido' || s.enrollmentStatus === 'Desistente').forEach((st) => {
         list.push({
           id: `sim-eixo4-${st.id}`,
           axis: 'Eixo 4',
-          action: st.status === 'transferido' ? 'Transferência' : 'Modificação Crítica',
-          details: `Aluno ${st.fullName} (Processo: ${st.processNumber || 'N/A'}) atualizado para estado: ${st.status}. Estatísticas demográficas atualizadas.`,
+          action: st.enrollmentStatus === 'Transferido' ? 'Transferência' : 'Modificação Crítica',
+          details: `Aluno ${st.name} (IUE: ${st.iue || 'N/A'}) com estado atualizado: ${st.enrollmentStatus || 'Ativo'}. Estatísticas demográficas atualizadas.`,
           userId: 'sec-01',
           userName: 'Secretaria Geral',
           userRole: 'Secretário(a)',
@@ -37,7 +39,7 @@ export function AuditLogsManager() {
           id: `sim-eixo7-${p.id}`,
           axis: 'Eixo 7',
           action: idx === 0 ? 'Atualização' : 'Criação',
-          details: `Registo de bem patrimonial: [${p.code}] ${p.name} (${p.category}) - Local: ${p.location} - Condição: ${p.condition}`,
+          details: `Registo de bem patrimonial: [${p.code}] ${p.name} (${p.category}) - Local: ${p.locationRoom} - Condição: ${p.condition || p.status}`,
           userId: 'admin-01',
           userName: currentUser?.name || 'Administrador',
           userRole: currentUser?.role || 'Diretor',

@@ -53,8 +53,16 @@ export function useHierarchicalStatistics() {
     };
 
     // 1. Generate Class Statistic Records for the current active school
-    const classRecords: ClassStatisticRecord[] = classes.map((cls, idx) => {
-      const clsStudents = students.filter(s => s.classId === cls.id);
+    const safeClassesList = (classes && classes.length > 0) ? classes : [
+      { id: 'c1', name: '10ª Turma A', gradeLevel: '10ª Classe', year: 2026 },
+      { id: 'c2', name: '11ª Turma B', gradeLevel: '11ª Classe', year: 2026 },
+      { id: 'c3', name: '12ª Turma A', gradeLevel: '12ª Classe', year: 2026 },
+      { id: 'c5', name: '8ª Turma A', gradeLevel: '8ª Classe', year: 2026 }
+    ];
+    const safeStudentsList = students || [];
+
+    const classRecords: ClassStatisticRecord[] = safeClassesList.map((cls, idx) => {
+      const clsStudents = safeStudentsList.filter(s => s.classId === cls.id);
       const totalStudents = clsStudents.length > 0 ? clsStudents.length : 32 + (idx * 3);
       const maleStudents = clsStudents.length > 0 
         ? clsStudents.filter(s => s.gender === 'M').length 
@@ -78,8 +86,8 @@ export function useHierarchicalStatistics() {
         teacherId: `prof-${idx + 1}`,
         teacherName: `Professor Director ${cls.name}`,
         academicYear: currentYear,
-        periodo: '1º Trimestre',
-        status: isInitialSubmitted ? 'Submetido ao Ciclo' : 'Pendente',
+        periodo: '1º Trimestre' as const,
+        status: (isInitialSubmitted ? 'Submetido ao Ciclo' : 'Pendente') as 'Pendente' | 'Submetido ao Ciclo' | 'Homologado pelo Ciclo',
         submittedAt: isInitialSubmitted ? '2026-03-15 10:30' : undefined,
         totalStudents,
         maleStudents,
@@ -502,19 +510,33 @@ export function useHierarchicalStatistics() {
   const [selectedDistrictName, setSelectedDistrictName] = useState<string>('KaMpfumo');
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('s1');
 
-  // Currently Selected Province
+  // Currently Selected Province (Defensive Validation)
   const currentProvince = useMemo(() => {
-    return nationalData.provinces.find(p => p.provinceName.toLowerCase() === selectedProvinceName.toLowerCase()) 
-      || nationalData.provinces[0];
+    const provNameStr = typeof selectedProvinceName === 'string' 
+      ? selectedProvinceName 
+      : (selectedProvinceName && typeof selectedProvinceName === 'object'
+          ? (selectedProvinceName as any).provinceName || (selectedProvinceName as any).name || ''
+          : 'Cidade de Maputo');
+    
+    const matched = nationalData.provinces.find(p => p.provinceName.toLowerCase() === provNameStr.toLowerCase());
+    return matched || nationalData.provinces[0];
   }, [nationalData, selectedProvinceName]);
 
-  // Currently Selected District inside selected Province
+  // Currently Selected District inside selected Province (Defensive Validation)
   const currentDistrict = useMemo(() => {
     if (!currentProvince || !currentProvince.districts?.length) return undefined;
-    return currentProvince.districts.find(d => 
-      d.districtName.toLowerCase().includes(selectedDistrictName.toLowerCase()) || 
-      selectedDistrictName.toLowerCase().includes(d.districtName.toLowerCase())
-    ) || currentProvince.districts[0];
+    
+    const distNameStr = typeof selectedDistrictName === 'string' 
+      ? selectedDistrictName 
+      : (selectedDistrictName && typeof selectedDistrictName === 'object'
+          ? (selectedDistrictName as any).districtName || (selectedDistrictName as any).name || ''
+          : 'KaMpfumo');
+
+    const matched = currentProvince.districts.find(d => 
+      d.districtName.toLowerCase().includes(distNameStr.toLowerCase()) || 
+      distNameStr.toLowerCase().includes(d.districtName.toLowerCase())
+    );
+    return matched || currentProvince.districts[0];
   }, [currentProvince, selectedDistrictName]);
 
   // Active School Shortcut

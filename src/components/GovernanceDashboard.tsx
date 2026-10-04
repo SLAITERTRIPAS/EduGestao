@@ -1412,13 +1412,13 @@ export const GovernanceDashboard: React.FC = () => {
         </div>
       )}
 
-      {(activeTab === 'chat' || activeTab === 'messages') && (
+      {(activeTab === 'chat' || (activeTab as string) === 'messages') && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <OfficialMessages />
         </div>
       )}
 
-      {activeTab === 'signature' && (
+      {(activeTab as string) === 'signature' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <SignatureManager />
         </div>
@@ -1466,13 +1466,13 @@ export const GovernanceDashboard: React.FC = () => {
     </div>
   );
 
-  const mappedTab = activeTab === 'calendar' ? 'scheduler' : activeTab === 'messages' ? 'chat' : activeTab === 'reports' ? 'relatorios' : activeTab;
+  const mappedTab = (activeTab as string) === 'calendar' ? 'scheduler' : (activeTab as string) === 'messages' ? 'chat' : (activeTab as string) === 'reports' ? 'relatorios' : activeTab;
   const resolvedActiveTab = ['scheduler', 'chat', 'relatorios'].includes(mappedTab) ? mappedTab : activeTab;
   const handleSetActiveTab = (tab: string) => {
     if (tab === 'calendar') setActiveTab('scheduler');
     else if (tab === 'messages') setActiveTab('chat');
     else if (tab === 'reports') setActiveTab('relatorios');
-    else setActiveTab(tab);
+    else setActiveTab(tab as any);
   };
 
   if (['national', 'provincial', 'district'].includes(currentUser?.role)) {

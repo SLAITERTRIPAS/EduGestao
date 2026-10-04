@@ -60,59 +60,38 @@ export interface SchoolLevelDefinition {
 export const ALL_SCHOOL_LEVELS_MAPPING: SchoolLevelDefinition[] = [
   {
     id: 'EP1',
-    label: 'EP1',
-    desc: 'Ensino Primário do 1º Grau (1.ª à 5.ª Classe)',
-    classes: ['1.ª Classe', '2.ª Classe', '3.ª Classe', '4.ª Classe', '5.ª Classe'],
+    label: 'Escola Primária (1.º Ciclo: 1.ª–3.ª)',
+    desc: 'Ensino Primário • 1.º Ciclo (1.ª, 2.ª e 3.ª classes)',
+    classes: ['1.ª Classe', '2.ª Classe', '3.ª Classe'],
     subjects: ['Português', 'Matemática', 'Ciências Naturais', 'Ciências Sociais', 'Educação Visual e Ofícios', 'Educação Física']
   },
   {
     id: 'EP2',
-    label: 'EP2',
-    desc: 'Ensino Primário do 2º Grau (6.ª e 7.ª Classe)',
-    classes: ['6.ª Classe', '7.ª Classe'],
+    label: 'Escola Primária (2.º Ciclo: 4.ª–6.ª)',
+    desc: 'Ensino Primário • 2.º Ciclo (4.ª, 5.ª e 6.ª classes)',
+    classes: ['4.ª Classe', '5.ª Classe', '6.ª Classe'],
     subjects: ['Português', 'Matemática', 'Ciências Naturais', 'História', 'Geografia', 'Educação Visual', 'Educação Física', 'Inglês']
   },
   {
     id: 'ENSINO BÁSICO',
-    label: 'ENSINO BÁSICO',
-    desc: 'Ensino Primário e Básico Unificado (1.ª à 9.ª Classe)',
+    label: 'Escola Básica (1.ª à 9.ª Classe)',
+    desc: 'Ensino Básico Unificado (Primario 1.ª–6.ª + 1.º Ciclo Secundário 7.ª–9.ª)',
     classes: ['1.ª Classe', '2.ª Classe', '3.ª Classe', '4.ª Classe', '5.ª Classe', '6.ª Classe', '7.ª Classe', '8.ª Classe', '9.ª Classe'],
     subjects: ['Português', 'Matemática', 'Ciências Naturais', 'História', 'Geografia', 'Física', 'Química', 'Biologia', 'Inglês', 'Educação Física', 'Agro-Pecuária']
   },
   {
     id: 'ENSINO SECUNDÁRIO DO 1 CICLO',
-    label: 'ENSINO SECUNDÁRIO DO 1º CICLO',
-    desc: 'Ensino Secundário Geral do 1º Ciclo (7.ª à 10.ª Classe)',
-    classes: ['7.ª Classe', '8.ª Classe', '9.ª Classe', '10.ª Classe'],
+    label: 'Ensino Secundário (1.º Ciclo: 7.ª–9.ª)',
+    desc: 'Ensino Secundário • 1.º Ciclo (7.ª, 8.ª e 9.ª classes)',
+    classes: ['7.ª Classe', '8.ª Classe', '9.ª Classe'],
     subjects: ['Português', 'Matemática', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Inglês', 'Francês', 'Educação Física', 'Agro-Pecuária', 'TIC / Informática']
   },
   {
     id: 'ENSINO SECUNDÁRIO DO 2 CICLO',
-    label: 'ENSINO SECUNDÁRIO DO 2º CICLO',
-    desc: 'Ensino Secundário Pré-Universitário (11.ª e 12.ª Classe)',
-    classes: ['11.ª Classe', '12.ª Classe'],
+    label: 'Ensino Secundário (2.º Ciclo: 10.ª–12.ª)',
+    desc: 'Ensino Secundário • 2.º Ciclo (10.ª, 11.ª e 12.ª classes)',
+    classes: ['10.ª Classe', '11.ª Classe', '12.ª Classe'],
     subjects: ['Português', 'Matemática', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Filosofia', 'Inglês', 'Francês', 'Desenho', 'Introdução à Economia']
-  },
-  {
-    id: 'ENSINO PRÉ-UNIVERSITÁRIO',
-    label: 'ENSINO PRÉ-UNIVERSITÁRIO',
-    desc: 'Cursos Preparatórios Pré-Universitários (11.ª e 12.ª Classe)',
-    classes: ['11.ª Classe', '12.ª Classe'],
-    subjects: ['Português', 'Matemática', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Filosofia', 'Inglês', 'Desenho Técnico']
-  },
-  {
-    id: 'ENSINO TÉCNICO PROFISSIONAL',
-    label: 'ENSINO TÉCNICO PROFISSIONAL',
-    desc: 'Formação Técnica e Vocacional Básica e Elementar',
-    classes: ['Nível 3 Técnico', 'Nível 4 Técnico', 'Nível 5 Técnico'],
-    subjects: ['Português Aplicado', 'Matemática Aplicada', 'Desenho Técnico', 'TIC / Informática', 'Higiene e Segurança no Trabalho', 'Gestão e Empreendedorismo', 'Módulos Vocacionais Práticos']
-  },
-  {
-    id: 'ENSINO MÉDIO PROFISSIONAL',
-    label: 'ENSINO MÉDIO PROFISSIONAL',
-    desc: 'Institutos Médios Politécnicos e Profissionais',
-    classes: ['1º Ano Médio', '2º Ano Médio', '3º Ano Médio'],
-    subjects: ['Português Técnico', 'Matemática Financeira', 'Contabilidade Geral', 'Informática de Gestão', 'Legislação Escolar e Trabalhista', 'Projetos Tecnológicos', 'Estágio Curricular']
   }
 ];
 

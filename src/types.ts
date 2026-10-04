@@ -13,8 +13,12 @@ export type Role =
   | 'admin' 
   | 'director' 
   | 'pedagogical' 
+  | 'pedagogical_c1' 
+  | 'pedagogical_c2' 
+  | 'pedagogical_c3' 
   | 'teacher' 
   | 'secretariat' 
+  | 'financial'
   | 'secretariat_rh' 
   | 'secretariat_patrimonio' 
   | 'secretariat_recepcao' 
@@ -68,6 +72,7 @@ export interface User {
   subRole?: string;
   department?: string;
   roleTitle?: string;
+  pedagogicalCycle?: 'ciclo1' | 'ciclo2_esg1' | 'ciclo2_esg2' | 'todos' | string;
   schoolId?: string;
   districtId?: string;
   provinceId?: string;
@@ -130,9 +135,26 @@ export interface School {
   address: string;
   schoolTypes?: SchoolLevelType[];
   directorName?: string;
+  directorNip?: string;
+  directorEmail?: string;
+  directorPassword?: string;
+  directorPhone?: string;
   dapName?: string;
+  dapNip?: string;
+  dapEmail?: string;
+  dapPassword?: string;
+  dapPhone?: string;
   pedagogicalDirectorName?: string;
   secretariatChiefName?: string;
+  secretariatNip?: string;
+  secretariatEmail?: string;
+  secretariatPassword?: string;
+  secretariatPhone?: string;
+  financialChiefName?: string;
+  financialNip?: string;
+  financialEmail?: string;
+  financialPassword?: string;
+  financialPhone?: string;
   phone?: string;
   email?: string;
   shifts?: string[];
@@ -179,6 +201,9 @@ export interface ChatMessage {
   timestamp: string;
   read?: boolean;
   category?: 'suporte' | 'oficial' | 'geral';
+  attachedReportType?: 'nacional' | 'provincial' | 'distrital' | 'escola';
+  attachedReportJurisdictionId?: string;
+  attachedReportJurisdictionName?: string;
 }
 
 export interface PreviousSchool {
@@ -663,6 +688,7 @@ export interface Employee {
   department?: string; // Alocação: Secretaria, Biblioteca, etc.
 
   taughtSubjects: string[];
+  assignedClasses?: { classId: string; className: string }[];
 
   // Competências Atribuídas pela Direcção Pedagógica
   competencies?: any;
@@ -1098,6 +1124,77 @@ export interface BackupRecord {
     financialTransactionsCount: number;
     patrimonyCount: number;
   };
+}
+
+export interface AuditLog {
+  id: string;
+  axis: string;
+  action: string;
+  details: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  createdAt: string;
+  schoolId?: string;
+}
+
+export interface StudentAttendanceMark {
+  studentId: string;
+  studentName: string;
+  studentNumber?: string;
+  gender: 'M' | 'F';
+  status: 'P' | 'FJ' | 'FI' | 'A'; // P = Presente, FJ = Falta Justificada, FI = Falta Injustificada, A = Atraso
+  justificationReason?: string;
+}
+
+export interface DigitalLessonRecord {
+  id: string;
+  assignmentId: string;
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+  teacherId: string;
+  teacherName: string;
+  schoolId?: string;
+  date: string; // YYYY-MM-DD
+  dayOfWeek: 'Segunda-feira' | 'Terça-feira' | 'Quarta-feira' | 'Quinta-feira' | 'Sexta-feira' | 'Sábado';
+  trimester: 1 | 2 | 3;
+  academicYear: number;
+  lessonNumber: number; // e.g. Lição 12
+  lessonSlot: string; // e.g. "1º e 2º Tempos (07:00 - 08:35)"
+  unitTopic?: string; // Unidade Temática
+  topic: string; // Tema da Aula / Conteúdo
+  objectives?: string; // Objetivos pedagógicos
+  homework?: string; // TPC - Trabalho Para Casa
+  pedagogicalObservations?: string; // Observações da aula
+  teacherAssiduity: 'present' | 'absent_justified' | 'absent_unjustified' | 'substitute' | 'compensated';
+  substituteTeacherName?: string;
+  teacherSignedAt?: string;
+  teacherSignatureStamp?: string;
+  attendanceRecords: StudentAttendanceMark[];
+  attendanceSummary: {
+    totalStudents: number;
+    presentCount: number;
+    justifiedAbsenceCount: number;
+    unjustifiedAbsenceCount: number;
+    lateCount: number;
+    attendanceRate: number; // 0-100%
+  };
+  pedagogicalVisa?: {
+    status: 'pendente' | 'aprovado' | 'com_observacoes';
+    reviewedBy: string;
+    reviewedAt: string;
+    observation?: string;
+    visaNumber?: string;
+  };
+  secretariatVisa?: {
+    status: 'pendente' | 'auditado' | 'arquivado';
+    auditedBy: string;
+    auditedAt: string;
+    termNumber?: string;
+  };
+  createdAt: string;
 }
 
 

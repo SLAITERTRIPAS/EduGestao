@@ -11,7 +11,7 @@ export function GovernanceManagerRegistration() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('provincial');
-  const [province, setProvince] = useState(MOZAMBIQUE_PROVINCES[0]);
+  const [province, setProvince] = useState<string>(MOZAMBIQUE_PROVINCES[0].province);
   const [district, setDistrict] = useState('');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +21,7 @@ export function GovernanceManagerRegistration() {
   const handleRegisterManager = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
-      alert('Por favor, preencha o nome e o email do gestor.');
+      setSuccessMsg('Por favor, preencha o nome e o email do gestor.');
       return;
     }
 
@@ -132,7 +132,7 @@ export function GovernanceManagerRegistration() {
                   className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   {MOZAMBIQUE_PROVINCES.map(p => (
-                    <option key={String(p)} value={String(p)}>{String(p)}</option>
+                    <option key={p.province} value={p.province}>{p.province}</option>
                   ))}
                 </select>
               </div>

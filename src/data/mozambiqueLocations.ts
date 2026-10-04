@@ -220,15 +220,29 @@ export const MOZAMBIQUE_PROVINCES: ProvinceDistricts[] = [
   }
 ];
 
-export function getDistrictsForProvince(provinceName: string): string[] {
+export function getDistrictsForProvince(provinceName: any): string[] {
+  let nameStr = '';
+  if (typeof provinceName === 'string') {
+    nameStr = provinceName;
+  } else if (provinceName && typeof provinceName === 'object') {
+    nameStr = provinceName.provinceName || provinceName.province || provinceName.name || '';
+  }
+
   const found = MOZAMBIQUE_PROVINCES.find(
-    p => p.province.toLowerCase() === (provinceName || '').trim().toLowerCase()
+    p => p.province.toLowerCase() === (nameStr || '').trim().toLowerCase()
   );
   return found ? found.districts : [];
 }
 
-export function getInitials(name: string): string {
-  const cleanName = (name || '').trim();
+export function getInitials(name: any): string {
+  let nameStr = '';
+  if (typeof name === 'string') {
+    nameStr = name;
+  } else if (name && typeof name === 'object') {
+    nameStr = name.name || name.fullName || '';
+  }
+
+  const cleanName = (nameStr || '').trim();
   if (!cleanName) return '';
   const stopWords = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
   const words = cleanName.split(/\s+/).filter(Boolean);

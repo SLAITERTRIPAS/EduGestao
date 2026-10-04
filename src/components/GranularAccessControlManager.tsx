@@ -506,7 +506,6 @@ export const GranularAccessControlManager: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-500 uppercase">Predefinições Rápidas:</span>
             <Button 
-              size="sm" 
               variant="outline" 
               onClick={() => handleApplyPresetToRole(selectedRole, 'all')}
               className="text-[11px] font-bold h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
@@ -514,7 +513,6 @@ export const GranularAccessControlManager: React.FC = () => {
               Conceder Total
             </Button>
             <Button 
-              size="sm" 
               variant="outline" 
               onClick={() => handleApplyPresetToRole(selectedRole, 'readonly')}
               className="text-[11px] font-bold h-8 border-blue-300 text-blue-700 hover:bg-blue-50"
@@ -522,7 +520,6 @@ export const GranularAccessControlManager: React.FC = () => {
               Apenas Leitura
             </Button>
             <Button 
-              size="sm" 
               variant="outline" 
               onClick={() => handleApplyPresetToRole(selectedRole, 'restricted')}
               className="text-[11px] font-bold h-8 border-rose-300 text-rose-700 hover:bg-rose-50"
@@ -773,7 +770,6 @@ export const GranularAccessControlManager: React.FC = () => {
 
                   <div className="flex items-center gap-2">
                     <Button
-                      size="sm"
                       variant="outline"
                       onClick={() => {
                         const updatedOverrides = { ...employeeOverrides };
@@ -860,7 +856,6 @@ export const GranularAccessControlManager: React.FC = () => {
               </p>
             </div>
             <Button
-              size="sm"
               variant="outline"
               onClick={() => {
                 localStorage.removeItem('minedh_permissions_audit_log');

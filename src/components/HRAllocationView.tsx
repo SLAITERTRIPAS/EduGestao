@@ -201,17 +201,16 @@ export const HRAllocationView: React.FC = () => {
                         ))}
                       </select>
                       <Button 
-                        size="sm" 
                         onClick={() => handleAllocate(emp.id)}
                         disabled={!targetSchoolId}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
                       >
                         Confirmar
                       </Button>
                       <Button 
-                        size="sm" 
-                        variant="ghost" 
+                        variant="outline" 
                         onClick={() => setIsAllocating(null)}
+                        className="text-xs"
                       >
                         Cancelar
                       </Button>
@@ -220,9 +219,8 @@ export const HRAllocationView: React.FC = () => {
                     <>
                       <Button 
                         variant="outline" 
-                        size="sm"
                         onClick={() => setIsAllocating(emp.id)}
-                        className="border-slate-300 text-slate-700 font-bold gap-2"
+                        className="border-slate-300 text-slate-700 font-bold gap-2 text-xs"
                       >
                         <ArrowRightLeft size={14} />
                         Alocar para Escola
@@ -230,9 +228,8 @@ export const HRAllocationView: React.FC = () => {
                       
                       {emp.status !== 'validado' && (
                         <Button 
-                          size="sm"
                           onClick={() => handleVerify(emp.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-sm text-xs"
                         >
                           <UserCheck size={14} />
                           Validar e Atualizar

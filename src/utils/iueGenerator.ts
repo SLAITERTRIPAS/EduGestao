@@ -210,10 +210,17 @@ export function extractSchoolCode(schoolName?: string, customCode?: string): str
  * Normaliza o nome da província (letras maiúsculas, sem acentos, sem espaços)
  * Ex: "Zambézia" -> "ZAMBEZIA", "Maputo Cidade" -> "MAPUTO"
  */
-export function normalizeProvince(province?: string): string {
-  if (!province || !province.trim()) return 'MAPUTO';
+export function normalizeProvince(province?: any): string {
+  let nameStr = '';
+  if (typeof province === 'string') {
+    nameStr = province;
+  } else if (province && typeof province === 'object') {
+    nameStr = province.provinceName || province.province || province.name || '';
+  }
+
+  if (!nameStr || !nameStr.trim()) return 'MAPUTO';
   
-  let clean = removeDiacritics(province.trim());
+  let clean = removeDiacritics(nameStr.trim());
   
   if (clean.includes('MAPUTO CIDADE') || clean.includes('CIDADE DE MAPUTO')) {
     return 'MAPUTO';

@@ -64,21 +64,25 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   const getRoleName = (role: string) => {
     switch (role) {
       case 'admin': return 'Administrador Geral';
-      case 'director': return 'Diretor';
+      case 'director': return 'Diretor da Escola';
       case 'pedagogical': return 'Diretor Adjunto Pedagógico';
+      case 'pedagogical_c1': return 'DAP (1.º Ciclo)';
+      case 'pedagogical_c2': return 'DAP (2.º Ciclo ESG1)';
+      case 'pedagogical_c3': return 'DAP (2.º Ciclo ESG2)';
       case 'teacher': return 'Professor';
       case 'secretariat': return 'Chefe da Secretaria';
+      case 'financial':
+      case 'secretariat_financas': return 'Gestor Financeiro';
+      case 'national': return 'Gestor do Ministério (MINEDH)';
+      case 'provincial': return 'Gestor Provincial (DPE)';
+      case 'district': return 'Gestor Distrital (SDEJT)';
+      case 'student': return 'Aluno';
+      case 'guardian': return 'Encarregado de Educação';
       case 'secretariat_rh': return 'Secretaria RH';
       case 'secretariat_patrimonio': return 'Património';
       case 'secretariat_recepcao': return 'Recepção / Atendimento';
       case 'secretariat_arquivo': return 'Arquivo Escolar';
-      case 'secretariat_financas': return 'Finanças & Propinas';
       case 'librarian': return 'Biblioteca';
-      case 'guardian': return 'Encarregado de Educação';
-      case 'national': return 'Ministério (Nacional)';
-      case 'provincial': return 'Direção Provincial';
-      case 'district': return 'Direção Distrital';
-      case 'student': return 'Aluno';
       default: return role;
     }
   };
@@ -93,7 +97,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
 
   return (
     <header className={`bg-[#070d24] border-b border-[#18234d] text-white sticky top-0 z-40 shadow-lg no-print ${className}`}>
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
         <div className="flex items-center justify-between gap-4">
           
           {/* Left: Official Emblem with Transparent Background & School Info */}
@@ -177,18 +181,18 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             
             {/* Actions Toolbar */}
             <div className="flex items-center gap-2 pl-2 border-l border-slate-700/60">
-              <button onClick={handleRefreshClick} className="p-2 text-cyan-300 hover:text-white" title="Recarregar">
+              <button onClick={handleRefreshClick} className="p-2 border border-blue-500 bg-[#0c1738] text-blue-400 rounded-lg hover:bg-blue-500/20" title="Recarregar">
                 <RotateCw className="h-4 w-4"/>
               </button>
-              <button className="p-2 text-cyan-300 hover:text-white" title="Base de Dados Online">
+              <button className="p-2 border border-slate-500 bg-[#0c1738] text-slate-300 rounded-lg hover:bg-slate-500/20" title="Base de Dados Online">
                 <Database className="h-4 w-4"/>
               </button>
               {onToggleFullscreen && (
-                <button onClick={onToggleFullscreen} className="p-2 text-cyan-300 hover:text-white" title="Ecrã Inteiro">
+                <button onClick={onToggleFullscreen} className="p-2 border border-emerald-500 bg-[#0c1738] text-emerald-400 rounded-lg hover:bg-emerald-500/20" title="Ecrã Inteiro">
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </button>
               )}
-              <button onClick={logout} className="p-2 text-red-300 hover:text-white" title="Sair do Sistema">
+              <button onClick={logout} className="p-2 border border-red-500 bg-[#0c1738] text-red-400 rounded-lg hover:bg-red-500/20" title="Sair do Sistema">
                 <LogOut className="h-4 w-4"/>
               </button>
             </div>

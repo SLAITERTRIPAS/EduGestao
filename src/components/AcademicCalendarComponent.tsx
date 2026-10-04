@@ -7,6 +7,7 @@ import {
   saveEvents,
   createNotificationForEvent
 } from '../utils/notificationStore';
+import { SchoolCalendarConfigManager } from './SchoolCalendarConfigManager';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -107,6 +108,7 @@ const INITIAL_EVENTS: AcademicEvent[] = [
 
 export const AcademicCalendarComponent: React.FC = () => {
   const { currentUser, employees, schools } = useStore();
+  const [activeCalendarSubTab, setActiveCalendarSubTab] = useState<'events' | 'config'>('events');
   const [events, setEvents] = useState<AcademicEvent[]>(() => {
     const saved = getStoredEvents();
     return saved.length > 0 ? saved : INITIAL_EVENTS;
@@ -295,7 +297,7 @@ export const AcademicCalendarComponent: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-4">
             <button onClick={() => window.history.back()} className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl transition-colors border border-slate-200 shadow-2xs">
                 <ChevronLeft size={20} />
@@ -303,29 +305,62 @@ export const AcademicCalendarComponent: React.FC = () => {
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-serif">
                 <CalendarIcon className="text-blue-600" size={24} />
-                Calendário Académico & Agendamento
+                Calendário Académico & Configuração de Trimestres
               </h2>
               <p className="text-xs text-slate-500 mt-1 max-w-2xl font-medium">
-                Clique em qualquer dia para agendar eventos, definir público-alvo, número de sala e enviar mensagens com notificação aos colaboradores.
+                Agendamento de eventos, avisos e configuração de início/fim de trimestres, férias e bloqueios do Livro de Turma Digital.
               </p>
             </div>
         </div>
 
-        {canManageEvents && (
-          <Button
-            onClick={() => {
-              const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-              handleDateClick(todayStr);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 text-xs py-3 px-5 rounded-xl shadow-sm whitespace-nowrap"
+        {/* Subtab Switcher */}
+        <div className="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shrink-0">
+          <button
+            onClick={() => setActiveCalendarSubTab('events')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeCalendarSubTab === 'events'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
           >
-            <Plus size={16} />
-            Agendar Novo Evento / Mensagem
-          </Button>
-        )}
+            <CalendarIcon size={16} />
+            <span>Calendário & Eventos</span>
+          </button>
+
+          <button
+            onClick={() => setActiveCalendarSubTab('config')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeCalendarSubTab === 'config'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Clock size={16} />
+            <span>Configuração do Diretor (Bloqueios)</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {activeCalendarSubTab === 'config' ? (
+        <SchoolCalendarConfigManager />
+      ) : (
+        <div className="space-y-6">
+          <div className="flex justify-end">
+            {canManageEvents && (
+              <Button
+                onClick={() => {
+                  const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+                  handleDateClick(todayStr);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 text-xs py-3 px-5 rounded-xl shadow-sm whitespace-nowrap"
+              >
+                <Plus size={16} />
+                Agendar Novo Evento / Mensagem
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Calendar Grid View (Left Column) */}
         <Card className="lg:col-span-8 p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <div className="flex items-center justify-between mb-6">
@@ -839,6 +874,8 @@ export const AcademicCalendarComponent: React.FC = () => {
               </Button>
             </div>
           </Card>
+        </div>
+      )}
         </div>
       )}
     </div>
